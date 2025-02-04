@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Employee, ShiftPattern, ShiftTypeDefinition } from '../types';
+import { ShiftPattern, ShiftTypeDefinition } from '../types';
 import { format, addDays } from 'date-fns';
 
 interface AssignShiftPatternFormProps {

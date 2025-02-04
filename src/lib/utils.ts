@@ -2,7 +2,7 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { format, getDay, parse, addDays, startOfDay, max, min, differenceInMinutes } from 'date-fns';
-import { CalendarDay, productionCalendar2025, Shift } from '../types';
+import { productionCalendar2025, Shift } from '../types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
