@@ -692,7 +692,7 @@ export default function TimeSheet() {
   };
 
   return (
-    <Card>
+    <Card >
       <CardHeader
         title={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -778,7 +778,7 @@ export default function TimeSheet() {
         }
       />
       <CardContent>
-        <Box sx={{ width: '100%', height: 600, overflow: 'auto' }}>
+        <Box sx={{ width: '100%', height: '85vh', overflow: 'auto' }}>
           <AgGridReact
             ref={gridRef}
             rowData={rows}

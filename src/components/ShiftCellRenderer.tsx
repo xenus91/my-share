@@ -1,6 +1,6 @@
 'use client';
 
-import  { useState } from "react";
+import React, { useState } from "react";
 import type { ICellRendererParams } from "ag-grid-community";
 import { Box, Button, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
@@ -87,12 +87,14 @@ export function ShiftCellRenderer(
         />
       </Box>
 
-      {/* Правая часть: блок "Доля" (если fraction < 1) и список смен */}
+      {/* Правая часть: блок "Доля" и список смен, располагаемые в столбец */}
       <Box
         sx={{
           width: "83.33%", // ~10/12
           height: "100%",
           overflowY: "auto",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         {showFractionBlock && (
