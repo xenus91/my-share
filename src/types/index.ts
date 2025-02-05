@@ -11,7 +11,7 @@ export interface Employee {
   name: string;
   position: string;
   department: string;
-  email: string;
+  office: string;
 
   // Новый массив периодов долей занятости
   workloadPeriods: WorkloadPeriod[];

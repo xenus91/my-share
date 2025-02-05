@@ -120,7 +120,7 @@ export default function TimeSheet() {
       name: 'John Doe',
       position: 'Software Engineer',
       department: 'Engineering',
-      email: 'john@example.com',
+      office: 'РЦ-8117',
       shifts: {},
       workloadPeriods: [],
     },
@@ -375,7 +375,7 @@ export default function TimeSheet() {
           name: employee.name,
           position: employee.position,
           department: employee.department,
-          email: employee.email,
+          office: employee.office,
           workloadPeriods: employee.workloadPeriods,
           totalHours: days.reduce((sum: number, day: Date) => {
             const dateStr = format(day, 'yyyy-MM-dd');

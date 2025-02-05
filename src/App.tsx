@@ -1,7 +1,7 @@
-// App.tsx
-import  { useState, useEffect } from 'react';
+// src/App.tsx
+import  { useEffect, useState } from 'react';
 import TimeSheet from './components/TimeSheet';
-import { API_BASE_URL } from '../config';
+import { ensureEmployeesListExists } from './services/userService';
 import {
   Dialog,
   DialogTitle,
@@ -13,30 +13,16 @@ import {
 import './App.css';
 
 function App() {
-  // Состояние для открытия диалога, если список "Employees" не найден
   const [openDialog, setOpenDialog] = useState(false);
 
   useEffect(() => {
-    // Выполняем запрос к API SharePoint для получения списка "Employees"
-    fetch(`${API_BASE_URL}/web/lists/GetByTitle('DcEmail')`, {
-      headers: {
-        Accept: 'application/json;odata=verbose'
-      }
-    })
-      .then((response) => {
-        console.log('Response:', response);
-        if (!response.ok) {
-          // Если статус не OK (например, 404), считаем, что список не найден
-          setOpenDialog(true);
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log('Data:', data);
+    ensureEmployeesListExists()
+      .then(() => {
+        console.log("Проверка списка 'Employees' завершена успешно");
       })
       .catch((error) => {
-        console.error('Error:', error);
-        // В случае ошибки тоже показываем диалог
+        console.error("Ошибка при проверке/создании списка 'Employees':", error);
+        // Если ошибка, можно отобразить диалог с предложением создать список вручную
         setOpenDialog(true);
       });
   }, []);
@@ -44,13 +30,11 @@ function App() {
   return (
     <>
       <TimeSheet />
-      
-      {/* Диалог, который показывается, если список "Employees" не найден */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
         <DialogTitle>Список сотрудников не найден</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Список "Employees" не найден на сайте SharePoint. Создать список?
+            Список "Employees" не найден на сайте SharePoint. Создать список вручную?
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -59,8 +43,8 @@ function App() {
           </Button>
           <Button
             onClick={() => {
-              // Здесь можно добавить логику создания списка через API
-              console.log('Создать список "Employees"');
+              // Здесь можно добавить альтернативную логику создания списка вручную
+              console.log('Попытка создать список "Employees" вручную');
               setOpenDialog(false);
             }}
             color="primary"

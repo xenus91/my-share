@@ -2,20 +2,27 @@
 
 import React, { useState, useEffect } from "react";
 import {
+  Box,
   Button,
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogContentText,
+  DialogActions,
   TextField,
-  Grid,
-  Box,
   Typography,
+  Grid,
   IconButton,
 } from "@mui/material";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import SearchIcon from "@mui/icons-material/Search";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { v4 as uuidv4 } from "uuid";
 import { Employee, WorkloadPeriod } from "../types";
+import {
+  getUserIdByLoginName,
+  getUserPropertiesByAccountName,
+  createEmployee,
+} from "../services/userService";
 
 interface EmployeeDialogProps {
   employee?: Employee;
@@ -33,33 +40,42 @@ export function EmployeeDialog({
   onOpenChange,
 }: EmployeeDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setIsOpen = onOpenChange || setInternalOpen;
+
+  // Форма для базовых данных сотрудника
   const [formData, setFormData] = useState({
-    name: "",
-    position: "",
-    department: "",
-    email: "",
+    winName: "",       // Имя пользователя win (логин)
+    preferredName: "", // Имя, полученное из PeopleManager (PreferredName)
+    position: "",      // Должность (SPS-JobTitle)
+    department: "",    // Подразделение (Department)
+    office: "",        // Офис (Office)
     workloadPeriods: [] as WorkloadPeriod[],
   });
 
-  const isOpen = externalOpen !== undefined ? externalOpen : internalOpen;
-  const setIsOpen = onOpenChange || setInternalOpen;
+  // Состояние для хранения ошибок
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     if (employee) {
       setFormData({
-        name: employee.name || "",
+        winName: employee.name || "",
         position: employee.position || "",
         department: employee.department || "",
-        email: employee.email || "",
+        office: "",
         workloadPeriods: employee.workloadPeriods?.map((p) => ({ ...p })) || [],
+        preferredName: "",
       });
     } else {
       setFormData({
-        name: "",
+        winName: "",
         position: "",
         department: "",
-        email: "",
+        office: "",
         workloadPeriods: [],
+        preferredName: "",
       });
     }
   }, [employee, isOpen]);
@@ -97,16 +113,82 @@ export function EmployeeDialog({
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Функция для поиска пользователя по логину и заполнения расширенных полей
+  const handleSearch = async () => {
+    if (!formData.winName) {
+      setError("Введите логин пользователя");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const id = await getUserIdByLoginName(formData.winName);
+      if (!id) {
+        throw new Error("Пользователь с таким логином не найден");
+      }
+      setUserId(id);
+      const accountName = `i:0#.w|retail\\${formData.winName}`;
+      const props = await getUserPropertiesByAccountName(accountName);
+      if (props) {
+        setFormData((prev) => ({
+          ...prev,
+          preferredName: props.preferredName,
+          position: props.jobTitle,
+          department: props.department,
+          office: props.office,
+        }));
+      } else {
+        setError("Не удалось получить расширенные свойства пользователя");
+      }
+    } catch (err: any) {
+      setError(err.message || "Ошибка при поиске пользователя");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Обработчик отправки формы – создание сотрудника
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
-      name: formData.name,
-      position: formData.position,
-      department: formData.department,
-      email: formData.email,
-      workloadPeriods: formData.workloadPeriods,
-    });
-    setIsOpen(false);
+    if (!formData.winName) return;
+    if (!userId) {
+      setError("Сначала выполните поиск пользователя");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const payload = {
+        preferredName: formData.preferredName,
+        employeeId: userId,
+        jobTitle: formData.position,
+        department: formData.department,
+        office: formData.office,
+      };
+      const createdEmployee: any = await createEmployee(payload);
+      console.log("Создан сотрудник:", createdEmployee);
+      onSave({
+        name: createdEmployee.Title, // PreferredName
+        position: createdEmployee.JobTitle,
+        department: createdEmployee.Department,
+        office: createdEmployee.Office, // Email убираем
+        workloadPeriods: formData.workloadPeriods,
+      });
+      setIsOpen(false);
+      setFormData({
+        winName: "",
+        preferredName: "",
+        position: "",
+        department: "",
+        office: "",
+        workloadPeriods: [],
+      });
+      setUserId(null);
+    } catch (err: any) {
+      setError(err.message || "Ошибка при создании сотрудника");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -121,67 +203,63 @@ export function EmployeeDialog({
         </Box>
       )}
       <Dialog open={isOpen} onClose={() => setIsOpen(false)} fullWidth maxWidth="md">
-        <DialogTitle>
-          {employee ? "Редактировать сотрудника" : "Добавить сотрудника"}
-        </DialogTitle>
+        <DialogTitle>{employee ? "Редактировать сотрудника" : "Добавить сотрудника"}</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" gutterBottom>
-            {employee
-              ? "Обновите информацию о сотруднике и его периоды занятости."
-              : "Введите информацию для нового сотрудника."}
-          </Typography>
+          <DialogContentText variant="body2" gutterBottom>
+            Введите данные сотрудника. Введите "Имя пользователя win" и нажмите "Поиск"
+            для автоматического заполнения полей: Имя (PreferredName), Должность, Подразделение и Офис.
+          </DialogContentText>
           <Box component="form" onSubmit={handleSubmit}>
             <Grid container spacing={2}>
+              {/* Левая колонка – данные пользователя */}
               <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Имя пользователя win"
+                  fullWidth
+                  margin="normal"
+                  value={formData.winName}
+                  onChange={(e) => setFormData({ ...formData, winName: e.target.value })}
+                  required
+                />
+                <Box sx={{ mt: 1, mb: 2 }}>
+                  <Button variant="outlined" onClick={handleSearch} startIcon={<SearchIcon />}>
+                    {loading ? "Поиск..." : "Поиск"}
+                  </Button>
+                </Box>
                 <TextField
                   label="Имя"
                   fullWidth
                   margin="normal"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  required
+                  value={formData.preferredName}
+                  onChange={(e) => setFormData({ ...formData, preferredName: e.target.value })}
                 />
                 <TextField
                   label="Должность"
                   fullWidth
                   margin="normal"
                   value={formData.position}
-                  onChange={(e) =>
-                    setFormData({ ...formData, position: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, position: e.target.value })}
                   required
                 />
                 <TextField
-                  label="Отдел"
+                  label="Подразделение"
                   fullWidth
                   margin="normal"
                   value={formData.department}
-                  onChange={(e) =>
-                    setFormData({ ...formData, department: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                   required
                 />
                 <TextField
-                  label="Email"
-                  type="email"
+                  label="Офис"
                   fullWidth
                   margin="normal"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  required
+                  value={formData.office}
+                  onChange={(e) => setFormData({ ...formData, office: e.target.value })}
                 />
               </Grid>
+              {/* Правая колонка – периоды занятости */}
               <Grid item xs={12} sm={6}>
-                <Box
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  mb={2}
-                >
+                <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
                   <Typography variant="subtitle1" fontWeight="bold">
                     Периоды занятости
                   </Typography>
@@ -207,11 +285,7 @@ export function EmployeeDialog({
                           InputLabelProps={{ shrink: true }}
                           value={period.startDate}
                           onChange={(e) =>
-                            handleChangeWorkloadPeriod(
-                              period.id,
-                              "startDate",
-                              e.target.value
-                            )
+                            handleChangeWorkloadPeriod(period.id, "startDate", e.target.value)
                           }
                         />
                       </Grid>
@@ -223,11 +297,7 @@ export function EmployeeDialog({
                           InputLabelProps={{ shrink: true }}
                           value={period.endDate}
                           onChange={(e) =>
-                            handleChangeWorkloadPeriod(
-                              period.id,
-                              "endDate",
-                              e.target.value
-                            )
+                            handleChangeWorkloadPeriod(period.id, "endDate", e.target.value)
                           }
                         />
                       </Grid>
@@ -245,16 +315,7 @@ export function EmployeeDialog({
                           }}
                         />
                       </Grid>
-                      <Grid
-                        item
-                        xs={6}
-                        container
-                        alignItems="center"
-                        justifyContent="flex-end"
-                      >
-                        <IconButton onClick={() => console.log("Сохранён период:", period.id)}>
-                          <CheckCircleIcon color="success" />
-                        </IconButton>
+                      <Grid item xs={6} container alignItems="center" justifyContent="flex-end">
                         <IconButton onClick={() => handleDeleteWorkloadPeriod(period.id)}>
                           <DeleteIcon color="error" />
                         </IconButton>
@@ -264,11 +325,17 @@ export function EmployeeDialog({
                 ))}
               </Grid>
               <Grid item xs={12}>
-                <Box mt={2}>
-                  <Button type="submit" variant="contained" fullWidth>
+                {error && (
+                  <Typography variant="body2" color="error" sx={{ mb: 2 }}>
+                    {error}
+                  </Typography>
+                )}
+                <DialogActions sx={{ mt: 2 }}>
+                  <Button onClick={() => setIsOpen(false)}>Отмена</Button>
+                  <Button type="submit" variant="contained">
                     {employee ? "Обновить сотрудника" : "Добавить сотрудника"}
                   </Button>
-                </Box>
+                </DialogActions>
               </Grid>
             </Grid>
           </Box>
