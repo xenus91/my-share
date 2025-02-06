@@ -1,7 +1,10 @@
 // src/services/userService.ts
 import apiClient from '../api';
-import { Employee } from '../types';
+import { Employee, WorkloadPeriod } from '../types';
 import { getRequestDigest } from './contextService';
+
+
+
 
 // Получение свойств пользователя по accountName
 export async function getUserPropertiesByAccountName(accountName: string): Promise<{
@@ -205,4 +208,251 @@ export async function ensureEmployeesListExists(): Promise<void> {
           throw error;
       }
   }
+}
+
+
+export async function updateEmployee(spItemId: number, payload: {
+    preferredName: string;
+    employeeId: string;
+    jobTitle: string;
+    department: string;
+    office: string;
+  }): Promise<void> {
+    try {
+      const digest = await getRequestDigest();
+      const updatePayload = {
+        __metadata: { type: "SP.Data.EmployeesListItem" },
+        Title: payload.preferredName,
+        EmployeeId: payload.employeeId,
+        JobTitle: payload.jobTitle,
+        Department: payload.department,
+        Office: payload.office,
+      };
+  
+      await apiClient.post(
+        `/web/lists/GetByTitle('Employees')/items(${spItemId})`,
+        updatePayload,
+        {
+          headers: {
+            Accept: "application/json;odata=verbose",
+            "Content-Type": "application/json;odata=verbose",
+            "X-Requested-With": "XMLHttpRequest",
+            "X-RequestDigest": digest,
+            "IF-MATCH": "*",
+            "X-HTTP-Method": "MERGE",
+          },
+        }
+      );
+      console.log("✅ Сотрудник обновлён в списке Employees");
+    } catch (error) {
+      console.error("❌ Ошибка обновления сотрудника:", error);
+      throw error;
+    }
+  }
+  
+
+async function ensureWorkloadPeriodsListExists(): Promise<void> {
+    try {
+        await apiClient.get("/web/lists/GetByTitle('WorkloadPeriods')", {
+            headers: { Accept: 'application/json;odata=verbose' }
+        });
+        console.log("✅ Список 'WorkloadPeriods' найден");
+    } catch (error: any) {
+        if (error.response && error.response.status === 404) {
+            console.log("❌ Список 'WorkloadPeriods' не найден. Создаем...");
+
+            try {
+                const digest = await getRequestDigest();
+                if (!digest) throw new Error("❌ Ошибка: X-RequestDigest не получен!");
+
+                const listPayload = {
+                    __metadata: { "type": "SP.List" },
+                    Title: "WorkloadPeriods",
+                    BaseTemplate: 100,
+                    Description: "Периоды занятости сотрудников"
+                };
+
+                const createListResponse = await apiClient.post("/web/lists", listPayload, {
+                    headers: {
+                        Accept: 'application/json;odata=verbose',
+                        'Content-Type': 'application/json;odata=verbose',
+                        "X-Requested-With": "XMLHttpRequest",
+                        "X-RequestDigest": digest
+                    }
+                });
+
+                console.log("✅ Список 'WorkloadPeriods' создан:", createListResponse.data);
+
+                const fieldsUrl = `/web/lists/GetByTitle('WorkloadPeriods')/fields`;
+
+                // Поля
+                const fields = [
+                    { Title: "StartDate", FieldTypeKind: 4 },   // DateTime
+                    { Title: "EndDate", FieldTypeKind: 4 },     // DateTime
+                    { Title: "Fraction", FieldTypeKind: 9 }     // Number
+                ];
+
+                for (const field of fields) {
+                    await apiClient.post(fieldsUrl, {
+                        __metadata: { type: "SP.Field" },
+                        Title: field.Title,
+                        FieldTypeKind: field.FieldTypeKind
+                    }, {
+                        headers: {
+                            Accept: 'application/json;odata=verbose',
+                            "Content-Type": "application/json;odata=verbose",
+                            "X-Requested-With": "XMLHttpRequest",
+                            "X-RequestDigest": digest
+                        }
+                    });
+                    console.log(`✅ Поле '${field.Title}' добавлено.`);
+                }
+
+                // Добавляем Lookup-поле для связи с Employees
+                const lookupFieldPayload = {
+                    __metadata: { type: "SP.FieldLookup" },
+                    Title: "Employee",
+                    FieldTypeKind: 7, // Поле подстановки (Lookup)
+                    LookupList: await getListGUID("Employees"), // Получаем GUID списка Employees
+                    LookupField: "Title"
+                };
+
+                await apiClient.post(fieldsUrl, lookupFieldPayload, {
+                    headers: {
+                        Accept: 'application/json;odata=verbose',
+                        "Content-Type": "application/json;odata=verbose",
+                        "X-Requested-With": "XMLHttpRequest",
+                        "X-RequestDigest": digest
+                    }
+                });
+
+                console.log("✅ Поле 'Employee' (Lookup) добавлено.");
+            } catch (createError) {
+                console.error("❌ Ошибка создания списка 'WorkloadPeriods':", createError);
+                throw createError;
+            }
+        } else {
+            console.error("❌ Ошибка проверки списка 'WorkloadPeriods':", error);
+            throw error;
+        }
+    }
+}
+
+
+export async function getWorkloadPeriodsByEmployee(employeeId: number) {
+    try {
+        const response = await apiClient.get(`/web/lists/GetByTitle('WorkloadPeriods')/items?$filter=Employee/Id eq ${employeeId}&$expand=Employee`, {
+            headers: { Accept: "application/json;odata=verbose" }
+        });
+
+        return response.data.d.results.map((item: any) => ({
+            id: item.Id,
+            startDate: item.StartDate,
+            endDate: item.EndDate,
+            fraction: item.Fraction
+        }));
+    } catch (error) {
+        console.error("❌ Ошибка получения периодов занятости:", error);
+        return [];
+    }
+}
+
+
+export async function createWorkloadPeriod(employeeId: number, period: WorkloadPeriod) {
+    try {
+        const digest = await getRequestDigest();
+        const payload = {
+            __metadata: { type: "SP.Data.WorkloadPeriodsListItem" },
+            Title: period.id, // Используем UUID или ID из SharePoint
+            EmployeeId: employeeId, // ID сотрудника
+            StartDate: period.startDate,
+            EndDate: period.endDate,
+            Fraction: period.fraction
+        };
+
+        const response = await apiClient.post("/web/lists/GetByTitle('WorkloadPeriods')/items", payload, {
+            headers: {
+                Accept: "application/json;odata=verbose",
+                "Content-Type": "application/json;odata=verbose",
+                "X-Requested-With": "XMLHttpRequest",
+                "X-RequestDigest": digest
+            }
+        });
+
+        console.log("✅ Период занятости создан:", response.data);
+        return response.data.d.Id;
+    } catch (error) {
+        console.error("❌ Ошибка создания периода занятости:", error);
+        throw error;
+    }
+}
+
+
+export async function updateWorkloadPeriod(periodId: number, period: WorkloadPeriod) {
+    try {
+        const digest = await getRequestDigest();
+        const payload = {
+            __metadata: { type: "SP.Data.WorkloadPeriodsListItem" },
+            StartDate: period.startDate,
+            EndDate: period.endDate,
+            Fraction: period.fraction
+        };
+
+        await apiClient.post(`/web/lists/GetByTitle('WorkloadPeriods')/items(${periodId})`, payload, {
+            headers: {
+                Accept: "application/json;odata=verbose",
+                "Content-Type": "application/json;odata=verbose",
+                "X-Requested-With": "XMLHttpRequest",
+                "X-RequestDigest": digest,
+                "IF-MATCH": "*",  // Для обновления существующих записей
+                "X-HTTP-Method": "MERGE" // Обновление без создания новой записи
+            }
+        });
+
+        console.log("✅ Период занятости обновлен.");
+    } catch (error) {
+        console.error("❌ Ошибка обновления периода занятости:", error);
+        throw error;
+    }
+}
+
+
+export async function deleteWorkloadPeriod(periodId: number) {
+    try {
+        const digest = await getRequestDigest();
+
+        await apiClient.post(`/web/lists/GetByTitle('WorkloadPeriods')/items(${periodId})`, {}, {
+            headers: {
+                Accept: "application/json;odata=verbose",
+                "X-Requested-With": "XMLHttpRequest",
+                "X-RequestDigest": digest,
+                "IF-MATCH": "*",
+                "X-HTTP-Method": "DELETE"
+            }
+        });
+
+        console.log("✅ Период занятости удален.");
+    } catch (error) {
+        console.error("❌ Ошибка удаления периода занятости:", error);
+        throw error;
+    }
+}
+
+
+/**
+ * Получает GUID списка по его названию.
+ * @param listTitle Название списка в SharePoint.
+ * @returns GUID списка.
+ */
+export async function getListGUID(listTitle: string): Promise<string> {
+    try {
+        const response = await apiClient.get(`/web/lists/GetByTitle('${listTitle}')?$select=Id`, {
+            headers: { Accept: "application/json;odata=verbose" }
+        });
+
+        return response.data.d.Id; // GUID списка
+    } catch (error) {
+        console.error(`❌ Ошибка получения GUID списка '${listTitle}':`, error);
+        throw error;
+    }
 }

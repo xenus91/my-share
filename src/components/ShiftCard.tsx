@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState, MouseEvent } from "react";
 import { Button, Menu, MenuItem, Typography, Box } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";

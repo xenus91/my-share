@@ -1,8 +1,10 @@
+import { API_BASE_URL } from '../../config';
+
 export async function getRequestDigest(): Promise<string> {
   try {
       console.log("🔹 Запрашиваем X-RequestDigest...");
 
-      const response = await fetch("/api/contextinfo", {
+      const response = await fetch(`${API_BASE_URL}/contextinfo`, { // Используем API_BASE_URL
           method: "POST",
           headers: {
               Accept: "application/json;odata=verbose",
