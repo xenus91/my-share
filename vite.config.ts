@@ -1,19 +1,24 @@
-// vite.config.ts
 import { defineConfig, loadEnv } from 'vite';
 
 export default defineConfig(({ command, mode }) => {
-  // Загрузим переменные окружения для текущего режима
+  // Загрузим переменные окружения
   const env = loadEnv(mode, process.cwd(), '');
+
+  console.log("🔹 Vite режим:", mode);
+  console.log("🔹 Proxy target:", env.VITE_PROXY_BASE_URL);
+
   if (command === 'serve') {
-    console.log('Proxy target:', env.VITE_PROXY_BASE_URL);
     return {
       server: {
         proxy: {
           '/api': {
-            target: env.VITE_PROXY_BASE_URL, // используем переменную из env
+            target: env.VITE_PROXY_BASE_URL, // используем переменную из .env
             changeOrigin: true,
             secure: false,
-            rewrite: (path) => path.replace(/^\/_api/, ''),
+            rewrite: (path) => {
+              console.log("🔹 Переписываем путь прокси:", path);
+              return path.replace(/^\/api/, '');
+            },
           },
         },
       },
