@@ -1,57 +1,62 @@
-// src/App.tsx
-import  { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import TimeSheet from './components/TimeSheet';
-import { ensureEmployeesListExists } from './services/userService';
+import { ensureEmployeesListExists, ensureWorkloadPeriodsListExists } from './services/listCheck';
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogContentText,
-  DialogActions,
-  Button
+  Typography,
+  LinearProgress,
+  Box
 } from '@mui/material';
 import './App.css';
 
 function App() {
-  const [openDialog, setOpenDialog] = useState(false);
+  const [openDialog, setOpenDialog] = useState(true);
+  const [status, setStatus] = useState<"loading" | "done" | "error">("loading");
 
   useEffect(() => {
-    ensureEmployeesListExists()
+    Promise.all([ensureEmployeesListExists(), ensureWorkloadPeriodsListExists()])
       .then(() => {
-        console.log("Проверка списка 'Employees' завершена успешно");
+        setStatus("done");
+        setTimeout(() => setOpenDialog(false), 1500);
       })
       .catch((error) => {
-        console.error("Ошибка при проверке/создании списка 'Employees':", error);
-        // Если ошибка, можно отобразить диалог с предложением создать список вручную
-        setOpenDialog(true);
+        // Если код ошибки = 500 — не показываем ошибку
+        if (error?.response?.status === 500) {
+          console.warn("Получен статус 500, но не отображаем ошибку.");
+          setStatus("done");
+          setTimeout(() => setOpenDialog(false), 1500);
+        } else {
+          console.error("Ошибка при проверке/создании списков:", error);
+          setStatus("error");
+        }
       });
   }, []);
-
+  
   return (
     <>
       <TimeSheet />
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>Список сотрудников не найден</DialogTitle>
+      <Dialog open={openDialog}>
         <DialogContent>
-          <DialogContentText>
-            Список "Employees" не найден на сайте SharePoint. Создать список вручную?
-          </DialogContentText>
+          {status === "loading" && (
+            <Box sx={{ minWidth: 300 }}>
+              <Typography variant="body1" sx={{ mb: 1 }}>
+                Настраиваем списки, пожалуйста подождите
+              </Typography>
+              <LinearProgress />
+            </Box>
+          )}
+          {status === "done" && (
+            <Typography variant="body1" sx={{ minWidth: 300 }}>
+              Все готово :)
+            </Typography>
+          )}
+          {status === "error" && (
+            <Typography variant="body1" color="error" sx={{ minWidth: 300 }}>
+              Произошла ошибка при настройке списков
+            </Typography>
+          )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)} color="primary">
-            Отмена
-          </Button>
-          <Button
-            onClick={() => {
-              // Здесь можно добавить альтернативную логику создания списка вручную
-              console.log('Попытка создать список "Employees" вручную');
-              setOpenDialog(false);
-            }}
-            color="primary"
-          >
-            Создать
-          </Button>
-        </DialogActions>
       </Dialog>
     </>
   );
