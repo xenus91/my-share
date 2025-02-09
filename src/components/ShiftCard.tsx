@@ -10,7 +10,7 @@ interface ShiftCardProps {
   shiftTypes: ShiftTypeDefinition[];
   employeeId: string;
   date: string;
-  onUpdateShift: (shiftData: Omit<Shift, "id">) => void;
+  onUpdateShift: (shiftData: Omit<Shift, "ID">) => void;
   onDeleteShift: (shiftId: string) => void;
 }
 
@@ -22,7 +22,8 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({
   onUpdateShift,
   onDeleteShift,
 }) => {
-  const shiftType = shiftTypes.find((type) => type.id === shift.shiftTypeId);
+  // Если вдруг shift.ShiftTypeId имеет тип string, приводим его к числу для сравнения с type.ID
+  const shiftType = shiftTypes.find((type) => type.ID === Number(shift.ShiftTypeId));
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [editOpen, setEditOpen] = useState(false);
 
@@ -42,7 +43,8 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({
   };
 
   const handleDelete = () => {
-    onDeleteShift(shift.id);
+    // Приводим числовой ID смены к строке
+    onDeleteShift(shift.ID.toString());
     closeMenu();
   };
 
@@ -54,8 +56,8 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({
         variant="contained"
         size="small"
         sx={{
-          backgroundColor: shiftType.backgroundColor,
-          color: shiftType.textColor,
+          backgroundColor: shiftType.BackgroundColor,
+          color: shiftType.TextColor,
           textTransform: "none",
           padding: "2px 8px",
           mb: "1px",
@@ -64,10 +66,10 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({
       >
         <Box display="flex" justifyContent="space-between" alignItems="center" width="100%">
           <Typography variant="body2" fontWeight={500}>
-            {shiftType.description}
+            {shiftType.Description}
           </Typography>
           <Typography variant="body2" fontWeight={600}>
-            {shift.hours}ч
+            {shift.Hours}ч
           </Typography>
         </Box>
       </Button>

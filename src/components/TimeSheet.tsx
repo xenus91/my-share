@@ -40,7 +40,14 @@ import {
   startOfYear,
 } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { Employee, productionCalendar2025, Shift, ShiftTypeDefinition, ShiftPattern } from '../types';
+import {
+  Employee,
+  productionCalendar2025,
+  Shift,
+  ShiftTypeDefinition,
+  ShiftPattern,
+  CalendarDay,
+} from '../types';
 import { getDayNorm, calculateHolidayHours, calculateShiftHours } from '../lib/utils';
 import ShiftPatternForm from './ShiftPatternForm';
 import AssignShiftPatternForm from './AssignShiftPatternForm';
@@ -50,13 +57,14 @@ import { ShiftTypeDialog } from './ShiftTypeDialog';
 
 type ViewPeriod = 'week' | 'month' | 'year';
 
+// Расширяем Employee, добавляя словарь смен
 interface TimeSheetEntry extends Employee {
   shifts: { [key: string]: Shift[] };
 }
 
 interface FilterState {
   date: string;
-  shiftTypeId: string;
+  shiftTypeId: number; // лучше сразу number
 }
 
 export default function TimeSheet() {
@@ -70,64 +78,60 @@ export default function TimeSheet() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewPeriod, setViewPeriod] = useState<ViewPeriod>('week');
 
+  // Типы смен (ID — число)
   const [shiftTypes, setShiftTypes] = useState<ShiftTypeDefinition[]>([
     {
-      id: '1',
-      name: 'день',
-      backgroundColor: 'gray',
-      textColor: 'white',
-      affectsWorkingNorm: false,
-      requiredStartEndTime: true,
-      description: 'д',
-      defaultStartTime: '08:00',
-      defaultEndTime: '20:00',
-      defaultBreakStart: '12:00',
-      defaultBreakEnd: '13:00',
+      ID: 1,
+      Name: 'день',
+      BackgroundColor: 'gray',
+      TextColor: 'white',
+      AffectsWorkingNorm: false,
+      RequiredStartEndTime: true,
+      Description: 'д',
+      DefaultStartTime: '08:00',
+      DefaultEndTime: '20:00',
+      DefaultBreakStart: '12:00',
+      DefaultBreakEnd: '13:00',
     },
     {
-      id: '2',
-      name: 'ночь',
-      backgroundColor: 'black',
-      textColor: 'white',
-      affectsWorkingNorm: false,
-      requiredStartEndTime: true,
-      description: 'н',
-      defaultStartTime: '20:00',
-      defaultEndTime: '08:00',
-      defaultBreakStart: '21:00',
-      defaultBreakEnd: '22:00',
+      ID: 2,
+      Name: 'ночь',
+      BackgroundColor: 'black',
+      TextColor: 'white',
+      AffectsWorkingNorm: false,
+      RequiredStartEndTime: true,
+      Description: 'н',
+      DefaultStartTime: '20:00',
+      DefaultEndTime: '08:00',
+      DefaultBreakStart: '21:00',
+      DefaultBreakEnd: '22:00',
     },
     {
-      id: '3',
-      name: 'ГПХ',
-      backgroundColor: 'yellow',
-      textColor: 'black',
-      affectsWorkingNorm: false,
-      requiredStartEndTime: true,
-      description: 'аф',
-      defaultStartTime: '00:00',
-      defaultEndTime: '00:00',
-      defaultBreakStart: '00:00',
-      defaultBreakEnd: '00:00',
+      ID: 3,
+      Name: 'ГПХ',
+      BackgroundColor: 'yellow',
+      TextColor: 'black',
+      AffectsWorkingNorm: false,
+      RequiredStartEndTime: true,
+      Description: 'аф',
+      DefaultStartTime: '00:00',
+      DefaultEndTime: '00:00',
+      DefaultBreakStart: '00:00',
+      DefaultBreakEnd: '00:00',
     },
   ]);
 
+  // Список сотрудников. ID — число
   const [timeData, setTimeData] = useState<TimeSheetEntry[]>([
-    {
-      id: '1',
-      name: 'John Doe',
-      position: 'Software Engineer',
-      department: 'Engineering',
-      office: 'РЦ-8117',
-      shifts: {},
-      workloadPeriods: [],
-    },
+   
   ]);
 
-  // Handlers for shift pattern management
+  // ===========================
+  // Shift Pattern management
+  // ===========================
   const handleSavePattern = (pattern: ShiftPattern) => {
     setShiftPatterns((prev) => {
-      const existingIndex = prev.findIndex((p) => p.id === pattern.id);
+      const existingIndex = prev.findIndex((p) => p.ID === pattern.ID);
       if (existingIndex !== -1) {
         const updated = [...prev];
         updated[existingIndex] = pattern;
@@ -137,38 +141,51 @@ export default function TimeSheet() {
     });
   };
 
-  const handleDeletePattern = (id: string) => {
-    setShiftPatterns((prev) => prev.filter((p) => p.id !== id));
+  const handleDeletePattern = (patternId: number) => {
+    setShiftPatterns((prev) => prev.filter((p) => p.ID !== patternId));
   };
 
-  // Handler for assigning shift patterns
-  const handleAssignPattern = (assignments: { employeeId: string; shiftTypeId: string; date: string }[]) => {
+  // ===========================
+  // Assign shift patterns
+  // ===========================
+  // В AssignShiftPatternForm приходят значения shiftTypeId как string,
+  // поэтому парсим в number, прежде чем создавать смену.
+  const handleAssignPattern = (
+    assignments: { employeeId: string; shiftTypeId: number; date: string }[]
+  ) => {
     assignments.forEach(({ employeeId, shiftTypeId, date }) => {
-      const shiftType = shiftTypes.find((type) => type.id === shiftTypeId);
+      const shiftType = shiftTypes.find((type) => type.ID === shiftTypeId);
       if (!shiftType) {
-        console.warn(`ShiftType с id ${shiftTypeId} не найден.`);
+        console.warn(`ShiftType с ID=${shiftTypeId} не найден.`);
         return;
       }
       const hours = calculateShiftHours(
-        shiftType.defaultStartTime,
-        shiftType.defaultEndTime,
-        shiftType.defaultBreakStart,
-        shiftType.defaultBreakEnd
+        shiftType.DefaultStartTime,
+        shiftType.DefaultEndTime,
+        shiftType.DefaultBreakStart,
+        shiftType.DefaultBreakEnd
       );
-      handleAddShift(employeeId, date, {
-        shiftTypeId,
+      handleAddShift(
+        parseInt(employeeId, 10),
         date,
-        employeeId,
-        startTime: shiftType.defaultStartTime,
-        endTime: shiftType.defaultEndTime,
-        breakStart: shiftType.defaultBreakStart,
-        breakEnd: shiftType.defaultBreakEnd,
-        hours: hours,
-        isNightShift: shiftType.name.toLowerCase().includes('night') || false,
-      });
+        {
+          ShiftTypeId: shiftTypeId,
+          Date: date,
+          EmployeeId: parseInt(employeeId, 10),
+          StartTime: shiftType.DefaultStartTime,
+          EndTime: shiftType.DefaultEndTime,
+          BreakStart: shiftType.DefaultBreakStart,
+          BreakEnd: shiftType.DefaultBreakEnd,
+          Hours: hours,
+          IsNightShift: shiftType.Name.toLowerCase().includes('ноч') || false,
+        }
+      );
     });
   };
 
+  // ===========================
+  // Period generation
+  // ===========================
   function generateDays(date: Date, period: ViewPeriod): Date[] {
     let start: Date;
     let end: Date;
@@ -239,20 +256,23 @@ export default function TimeSheet() {
     }
   };
 
-  const handleAddEmployee = (employeeData: Omit<Employee, 'id'>) => {
+  // ===========================
+  // Employees management
+  // ===========================
+  const handleAddEmployee = (employeeData: Employee) => { // Теперь принимаем полный объект с ID
     const newEmployee: TimeSheetEntry = {
       ...employeeData,
-      id: Math.random().toString(36).substr(2, 9),
       shifts: {},
       workloadPeriods: employeeData.workloadPeriods || [],
     };
     setTimeData((prev) => [...prev, newEmployee]);
   };
+  
 
-  const handleUpdateEmployee = (id: string, employeeData: Omit<Employee, 'id'>) => {
+  const handleUpdateEmployee = (ID: number, employeeData: Omit<Employee, 'ID'>) => {
     setTimeData((prev) =>
       prev.map((emp) => {
-        if (emp.id === id) {
+        if (emp.ID === ID) {
           return {
             ...emp,
             ...employeeData,
@@ -264,47 +284,55 @@ export default function TimeSheet() {
     );
   };
 
-  const handleDeleteEmployee = (id: string) => {
-    setTimeData((prev) => prev.filter((emp) => emp.id !== id));
+  const handleDeleteEmployee = (ID: number) => {
+    setTimeData((prev) => prev.filter((emp) => emp.ID !== ID));
   };
 
-  const handleAddShiftType = (shiftTypeData: Omit<ShiftTypeDefinition, 'id'>) => {
+  // ===========================
+  // ShiftType management
+  // ===========================
+  const handleAddShiftType = (shiftTypeData: Omit<ShiftTypeDefinition, 'ID'>) => {
     const newShiftType: ShiftTypeDefinition = {
       ...shiftTypeData,
-      id: Math.random().toString(36).substr(2, 9),
+      ID: Math.floor(Math.random() * 1000000) + 1,
     };
     setShiftTypes((prev) => [...prev, newShiftType]);
   };
 
-  const handleUpdateShiftType = (id: string, shiftTypeData: Omit<ShiftTypeDefinition, 'id'>) => {
+  const handleUpdateShiftType = (ID: number, shiftTypeData: Omit<ShiftTypeDefinition, 'ID'>) => {
     setShiftTypes((prev) =>
-      prev.map((type) => (type.id === id ? { ...shiftTypeData, id } : type))
+      prev.map((type) => (type.ID === ID ? { ...shiftTypeData, ID } : type))
     );
   };
 
-  const handleDeleteShiftType = (id: string) => {
+  const handleDeleteShiftType = (ID: number) => {
+    // Проверяем, используется ли тип смены
     const isInUse = timeData.some((employee) =>
-      Object.values(employee.shifts).flat().some((shift) => shift.shiftTypeId === id)
+      Object.values(employee.shifts).flat().some((shift) => shift.ShiftTypeId === ID)
     );
     if (isInUse) {
-      alert('Нельзя удалить тип смены, который используется');
+      alert('Нельзя удалить тип смены, который уже используется');
       return;
     }
-    setShiftTypes((prev) => prev.filter((type) => type.id !== id));
+    setShiftTypes((prev) => prev.filter((type) => type.ID !== ID));
   };
 
+  // ===========================
+  // Shifts management
+  // ===========================
+  // Добавить смену
   const handleAddShift = (
-    employeeId: string,
+    employeeId: number,
     date: string,
-    shiftData: Omit<Shift, 'id'>
+    shiftData: Omit<Shift, 'ID'>
   ) => {
     const newShift: Shift = {
       ...shiftData,
-      id: Math.random().toString(36).substr(2, 9),
+      ID: Math.floor(Math.random() * 1000000) + 1, // Генерируем числовой ID
     };
     setTimeData((prevData) =>
       prevData.map((employee) => {
-        if (employee.id === employeeId) {
+        if (employee.ID === employeeId) {
           return {
             ...employee,
             shifts: {
@@ -318,21 +346,22 @@ export default function TimeSheet() {
     );
   };
 
+  // Обновить смену
   const handleUpdateShift = (
-    employeeId: string,
+    employeeId: number,
     date: string,
-    shiftId: string,
-    shiftData: Omit<Shift, 'id'>
+    shiftId: number,
+    shiftData: Omit<Shift, 'ID'>
   ) => {
     setTimeData((prevData) =>
       prevData.map((employee) => {
-        if (employee.id === employeeId) {
+        if (employee.ID === employeeId) {
           return {
             ...employee,
             shifts: {
               ...employee.shifts,
               [date]: employee.shifts[date].map((shift) =>
-                shift.id === shiftId ? { ...shiftData, id: shiftId } : shift
+                shift.ID === shiftId ? { ...shiftData, ID: shiftId } : shift
               ),
             },
           };
@@ -342,15 +371,16 @@ export default function TimeSheet() {
     );
   };
 
-  const handleDeleteShift = (employeeId: string, date: string, shiftId: string) => {
+  // Удалить смену
+  const handleDeleteShift = (employeeId: number, date: string, shiftId: number) => {
     setTimeData((prevData) =>
       prevData.map((employee) => {
-        if (employee.id === employeeId) {
+        if (employee.ID === employeeId) {
           return {
             ...employee,
             shifts: {
               ...employee.shifts,
-              [date]: employee.shifts[date].filter((s) => s.id !== shiftId),
+              [date]: employee.shifts[date].filter((s) => s.ID !== shiftId),
             },
           };
         }
@@ -359,51 +389,58 @@ export default function TimeSheet() {
     );
   };
 
+  // ===========================
+  // AgGrid: row data
+  // ===========================
   const rows = useMemo(() => {
     return timeData
       .filter((employee) => {
         if (!activeFilter) return true;
         const shifts = employee.shifts[activeFilter.date] || [];
-        return shifts.some((shift) => shift.shiftTypeId === activeFilter.shiftTypeId);
+        // Смотрим ShiftTypeId
+        return shifts.some((shift) => shift.ShiftTypeId === activeFilter.shiftTypeId);
       })
       .map((employee) => {
         const row: any = {
-          id: employee.id,
-          employeeId: employee.id,
-          name: employee.name,
-          position: employee.position,
-          department: employee.department,
-          office: employee.office,
+          ID: employee.ID,
+          employeeId: employee.ID,
+          Title: employee.Title,
+          JobTitle: employee.JobTitle,
+          Department: employee.Department,
+          Office: employee.Office,
           workloadPeriods: employee.workloadPeriods,
           totalHours: days.reduce((sum: number, day: Date) => {
             const dateStr = format(day, 'yyyy-MM-dd');
             const shifts = employee.shifts[dateStr] || [];
-            return sum + shifts.reduce((shiftSum: number, shift: Shift) => shiftSum + shift.hours, 0);
+            // 'Hours' соответствует интерфейсу Shift
+            return sum + shifts.reduce((shiftSum: number, shift: Shift) => shiftSum + shift.Hours, 0);
           }, 0),
           holidayHours: days.reduce((sum: number, day: Date) => {
             const dateStr = format(day, 'yyyy-MM-dd');
             const shifts = employee.shifts[dateStr] || [];
-            return sum + shifts.reduce((shiftSum: number, shift: Shift) => shiftSum + calculateHolidayHours(shift), 0);
+            return sum + shifts.reduce((shiftSum: number, shift: Shift) => {
+              return shiftSum + calculateHolidayHours(shift);
+            }, 0);
           }, 0),
           normHours: days.reduce((sum: number, day: Date) => {
             let dayNorm = getDayNorm(day);
             const dateStr = format(day, 'yyyy-MM-dd');
             const shifts = employee.shifts[dateStr] || [];
             const hasAffectingShift = shifts.some((shift) => {
-              const shiftType = shiftTypes.find((type) => type.id === shift.shiftTypeId);
-              return shiftType?.affectsWorkingNorm;
+              const shiftType = shiftTypes.find((type) => type.ID === shift.ShiftTypeId);
+              // 'AffectsWorkingNorm' в интерфейсе ShiftTypeDefinition
+              return shiftType?.AffectsWorkingNorm;
             });
             if (hasAffectingShift) return sum;
             let fraction = 1;
             const workloadPeriods = employee.workloadPeriods ?? [];
-            if (workloadPeriods.length > 0) {
-              for (const period of workloadPeriods) {
-                if (
-                  (!period.startDate || period.startDate <= dateStr) &&
-                  (!period.endDate || period.endDate >= dateStr)
-                ) {
-                  fraction = period.fraction;
-                }
+            // Проверяем, попадает ли дата в период
+            for (const period of workloadPeriods) {
+              if (
+                (!period.StartDate || period.StartDate <= dateStr) &&
+                (!period.EndDate || period.EndDate >= dateStr)
+              ) {
+                fraction = period.Fraction;
               }
             }
             dayNorm *= fraction;
@@ -411,11 +448,12 @@ export default function TimeSheet() {
           }, 0),
         };
 
+        // Динамические поля для каждого дня
         days.forEach((day) => {
           const formattedDate = format(day, 'yyyy-MM-dd');
           const shifts = employee.shifts[formattedDate] || [];
           row[`day-${formattedDate}`] = {
-            employeeId: employee.id,
+            employeeId: employee.ID,
             date: formattedDate,
             shifts,
           };
@@ -425,10 +463,13 @@ export default function TimeSheet() {
       });
   }, [timeData, days, shiftTypes, activeFilter]);
 
+  // ===========================
+  // AgGrid: column defs
+  // ===========================
   const fixedColumns: ColDef[] = useMemo(() => [
     {
       headerName: 'Сотрудник',
-      field: 'name',
+      field: 'Title',
       width: 200,
       pinned: 'left',
       cellRenderer: 'employeeCellRenderer',
@@ -490,104 +531,113 @@ export default function TimeSheet() {
     },
   ], []);
 
-  const dynamicColumns: ColDef[] = useMemo(() => days.map((day) => {
-    const formattedDate = format(day, 'yyyy-MM-dd');
-    const isHoliday = productionCalendar2025.some(
-      (d) => d.date === formattedDate && d.type === 'п'
-    );
-    const isPrevHoliday = productionCalendar2025.some(
-      (d) => d.date === formattedDate && d.type === 'пп'
-    );
-    const countsForDay: { [key: string]: number } = shiftTypes.reduce((acc, type) => {
-      acc[type.id] = 0;
-      return acc;
-    }, {} as { [key: string]: number });
-    timeData.forEach((employee) => {
-      const shifts = employee.shifts[formattedDate] || [];
-      shifts.forEach((shift) => {
-        if (countsForDay[shift.shiftTypeId] !== undefined) {
-          countsForDay[shift.shiftTypeId] += 1;
-        }
-      });
-    });
-    return {
-      headerName: `${format(day, 'EEEEEE', { locale: ru })}\n${format(day, 'd MMM', { locale: ru })}`,
-      field: `day-${formattedDate}`,
-      width: 150,
-      minWidth: 150,
-      sortable: false,
-      cellRenderer: 'shiftCellRenderer',
-      cellRendererParams: {
-        shiftTypes,
-        handleAddShift,
-        handleUpdateShift,
-        handleDeleteShift,
-      },
-      headerComponent: () => {
-        const isFilterActive = activeFilter?.date === formattedDate;
-        return (
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              px: 1,
-              py: 1.5,
-              borderRight: 1,
-              borderColor: 'divider',
-              backgroundColor: isHoliday
-                ? 'red'
-                : isPrevHoliday
-                ? 'orange'
-                : 'grey.100',
-              height: 'auto',
-            }}
-          >
-            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-              <Typography variant="subtitle2">{format(day, 'EEEEEE', { locale: ru })}</Typography>
-              <Typography variant="body2">{format(day, 'd MMM', { locale: ru })}</Typography>
-              <Typography variant="caption">Норма: {getDayNorm(day)}ч</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', mt: 1 }}>
-              {shiftTypes
-                .filter((type) => countsForDay[type.id] > 0)
-                .map((type) => {
-                  const isActive = isFilterActive && activeFilter?.shiftTypeId === type.id;
-                  return (
-                    <Button
-                      key={type.id}
-                      variant="text"
-                      size="small"
-                      sx={{
-                        m: 0.5,
-                        backgroundColor: type.backgroundColor,
-                        color: type.textColor,
-                        ...(isActive && { border: '2px solid blue' }),
-                      }}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => {
-                        if (activeFilter?.shiftTypeId === type.id && activeFilter?.date === formattedDate) {
-                          setActiveFilter(null);
-                        } else {
-                          setActiveFilter({
-                            date: formattedDate,
-                            shiftTypeId: type.id,
-                          });
-                        }
-                      }}
-                    >
-                      {type.name}: {countsForDay[type.id]}
-                    </Button>
-                  );
-                })}
-            </Box>
-          </Box>
-        );
-      },
-    };
-  }), [days, shiftTypes, timeData, activeFilter]);
+  const dynamicColumns: ColDef[] = useMemo(() => 
+    days.map((day) => {
+      const formattedDate = format(day, 'yyyy-MM-dd');
+      const isHoliday = productionCalendar2025.some(
+        (calDay: CalendarDay) => calDay.Date === formattedDate && calDay.Type === 'п'
+      );
+      const isPrevHoliday = productionCalendar2025.some(
+        (calDay: CalendarDay) => calDay.Date === formattedDate && calDay.Type === 'пп'
+      );
 
-  const allColumns: ColDef[] = useMemo(() => [...fixedColumns, ...dynamicColumns], [fixedColumns, dynamicColumns]);
+      // Подсчитываем, сколько смен каждого типа в этот день по всем сотрудникам
+      const countsForDay: { [key: number]: number } = {};
+      shiftTypes.forEach((st) => { countsForDay[st.ID] = 0; });
+
+      timeData.forEach((employee) => {
+        const shifts = employee.shifts[formattedDate] || [];
+        shifts.forEach((shift) => {
+          if (countsForDay[shift.ShiftTypeId] !== undefined) {
+            countsForDay[shift.ShiftTypeId]++;
+          }
+        });
+      });
+
+      return {
+        headerName: `${format(day, 'EEEEEE', { locale: ru })}\n${format(day, 'd MMM', { locale: ru })}`,
+        field: `day-${formattedDate}`,
+        width: 150,
+        minWidth: 150,
+        sortable: false,
+        cellRenderer: 'shiftCellRenderer',
+        cellRendererParams: {
+          shiftTypes,
+          handleAddShift,
+          handleUpdateShift,
+          handleDeleteShift,
+        },
+        headerComponent: () => {
+          const isFilterActive = activeFilter?.date === formattedDate;
+          return (
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                px: 1,
+                py: 1.5,
+                borderRight: 1,
+                borderColor: 'divider',
+                backgroundColor: isHoliday
+                  ? 'red'
+                  : isPrevHoliday
+                  ? 'orange'
+                  : 'grey.100',
+                height: 'auto',
+              }}
+            >
+              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                <Typography variant="subtitle2">{format(day, 'EEEEEE', { locale: ru })}</Typography>
+                <Typography variant="body2">{format(day, 'd MMM', { locale: ru })}</Typography>
+                <Typography variant="caption">Норма: {getDayNorm(day)}ч</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', mt: 1 }}>
+                {shiftTypes
+                  .filter((type) => countsForDay[type.ID] > 0)
+                  .map((type) => {
+                    const isActive = isFilterActive && activeFilter?.shiftTypeId === type.ID;
+                    return (
+                      <Button
+                        key={type.ID}
+                        variant="text"
+                        size="small"
+                        sx={{
+                          m: 0.5,
+                          backgroundColor: type.BackgroundColor,
+                          color: type.TextColor,
+                          ...(isActive && { border: '2px solid blue' }),
+                        }}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          if (isActive) {
+                            // Сбросить фильтр
+                            setActiveFilter(null);
+                          } else {
+                            // Установить фильтр
+                            setActiveFilter({
+                              date: formattedDate,
+                              shiftTypeId: type.ID,
+                            });
+                          }
+                        }}
+                      >
+                        {type.Name}: {countsForDay[type.ID]}
+                      </Button>
+                    );
+                  })}
+              </Box>
+            </Box>
+          );
+        },
+      };
+    })
+  , [days, shiftTypes, timeData, activeFilter]);
+
+  const allColumns: ColDef[] = useMemo(
+    () => [...fixedColumns, ...dynamicColumns],
+    [fixedColumns, dynamicColumns]
+  );
 
   const gridOptions: GridOptions = useMemo(() => ({
     defaultColDef: {
@@ -598,6 +648,7 @@ export default function TimeSheet() {
     rowHeight: 80,
     headerHeight: 100,
     components: {
+      // Рендер ячейки сотрудника (левый столбец)
       employeeCellRenderer: (params: ICellRendererParams) => {
         const [dialogOpen, setDialogOpen] = useState(false);
         const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -614,9 +665,9 @@ export default function TimeSheet() {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Box>
-                <Typography variant="subtitle1">{employee.name}</Typography>
+                <Typography variant="subtitle1">{employee.Title}</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {employee.position}
+                  {employee.JobTitle}
                 </Typography>
               </Box>
               <Box>
@@ -640,7 +691,7 @@ export default function TimeSheet() {
                   </MenuItem>
                   <MenuItem
                     onClick={() => {
-                      params.context.handleDeleteEmployee(employee.id);
+                      params.context.handleDeleteEmployee(employee.ID);
                       handleMenuClose();
                     }}
                   >
@@ -654,7 +705,7 @@ export default function TimeSheet() {
               open={dialogOpen}
               onOpenChange={setDialogOpen}
               employee={employee}
-              onSave={(data) => params.context.handleUpdateEmployee(employee.id, data)}
+              onSave={(data) => params.context.handleUpdateEmployee(employee.ID, data)}
             />
           </Box>
         );
@@ -677,10 +728,12 @@ export default function TimeSheet() {
     }
   }, [shiftTypes]);
 
+  // Сброс фильтра, когда меняется период
   useEffect(() => {
     setActiveFilter(null);
   }, [viewPeriod, currentDate]);
 
+  // Меню в заголовке
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const handleTopMenuOpen = (e: React.MouseEvent<HTMLElement>) => {
     setMenuAnchorEl(e.currentTarget);
@@ -689,8 +742,11 @@ export default function TimeSheet() {
     setMenuAnchorEl(null);
   };
 
+  // ===========================
+  // Render
+  // ===========================
   return (
-    <Card >
+    <Card>
       <CardHeader
         title={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -801,6 +857,7 @@ export default function TimeSheet() {
           <DialogContentText>
             Создавайте и изменяйте правила чередования
           </DialogContentText>
+          {/* Если ваш ShiftPatternForm ожидает ShiftPattern с полями ID: string; Name: string; Pattern: boolean[] */}
           <ShiftPatternForm
             existingPatterns={shiftPatterns}
             onSave={handleSavePattern}
@@ -823,10 +880,18 @@ export default function TimeSheet() {
           <DialogContentText>
             Примените правила чередования для быстрого назначения смен
           </DialogContentText>
+          {/* Убедитесь, что в AssignShiftPatternForm пропсы соответствуют типам:
+              - shiftTypeId: string
+              - employeeId: string
+              - date: string
+          */}
           <AssignShiftPatternForm
-            employees={timeData.map((employee) => ({ id: employee.id, name: employee.name }))}
-            shiftPatterns={shiftPatterns}
-            shiftTypes={shiftTypes}
+            employees={timeData.map((employee) => ({
+              id: String(employee.ID),    // приводим к строке
+              name: employee.Title,       // поле Title из Employee
+            }))}
+            shiftPatterns={shiftPatterns} // ID: string
+            shiftTypes={shiftTypes}       // ID: number
             onAssign={handleAssignPattern}
           />
         </DialogContent>

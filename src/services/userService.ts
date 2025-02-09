@@ -170,32 +170,39 @@ export async function getWorkloadPeriodsByEmployee(employeeId: number) {
 
 export async function createWorkloadPeriod(employeeId: number, period: WorkloadPeriod) {
     try {
-        const digest = await getRequestDigest();
-        const payload = {
-            __metadata: { type: "SP.Data.WorkloadPeriodsListItem" },
-            Title: period.id, // Используем UUID или ID из SharePoint
-            EmployeeId: employeeId, // ID сотрудника
-            StartDate: period.startDate,
-            EndDate: period.endDate,
-            Fraction: period.fraction
-        };
-
-        const response = await apiClient.post("/web/lists/GetByTitle('WorkloadPeriods')/items", payload, {
-            headers: {
-                Accept: "application/json;odata=verbose",
-                "Content-Type": "application/json;odata=verbose",
-                "X-Requested-With": "XMLHttpRequest",
-                "X-RequestDigest": digest
-            }
-        });
-
-        console.log("✅ Период занятости создан:", response.data);
-        return response.data.d.Id;
+      const digest = await getRequestDigest();
+      const payload = {
+        __metadata: { type: "SP.Data.WorkloadPeriodsListItem" },
+        // Если поле Title обязательно, можно передать пустую строку или другое значение,
+        // но временный ID здесь не передаётся
+        Title: "",
+        EmployeeId: employeeId,
+        StartDate: period.StartDate,
+        EndDate: period.EndDate,
+        Fraction: period.Fraction
+      };
+  
+      const response = await apiClient.post(
+        "/web/lists/GetByTitle('WorkloadPeriods')/items",
+        payload,
+        {
+          headers: {
+            Accept: "application/json;odata=verbose",
+            "Content-Type": "application/json;odata=verbose",
+            "X-Requested-With": "XMLHttpRequest",
+            "X-RequestDigest": digest
+          }
+        }
+      );
+  
+      console.log("✅ Период занятости создан:", response.data);
+      return response.data.d.Id;
     } catch (error) {
-        console.error("❌ Ошибка создания периода занятости:", error);
-        throw error;
+      console.error("❌ Ошибка создания периода занятости:", error);
+      throw error;
     }
-}
+  }
+  
 
 
 export async function updateWorkloadPeriod(periodId: number, period: WorkloadPeriod) {
@@ -203,9 +210,9 @@ export async function updateWorkloadPeriod(periodId: number, period: WorkloadPer
         const digest = await getRequestDigest();
         const payload = {
             __metadata: { type: "SP.Data.WorkloadPeriodsListItem" },
-            StartDate: period.startDate,
-            EndDate: period.endDate,
-            Fraction: period.fraction
+            StartDate: period.StartDate,
+            EndDate: period.EndDate,
+            Fraction: period.Fraction
         };
 
         await apiClient.post(`/web/lists/GetByTitle('WorkloadPeriods')/items(${periodId})`, payload, {

@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { nanoid } from 'nanoid';
 
-interface ShiftPattern {
-  id: string;
-  name: string;
-  pattern: boolean[]; // Одномерный массив, где каждая ячейка = смена (true или false)
+// Объявляем интерфейс для правила чередования, где все поля соответствуют SharePoint
+export interface ShiftPattern {
+  ID: number;          // числовой идентификатор
+  Name: string;
+  Pattern: boolean[];  // массив для определения смен (true/false)
 }
 
 interface ShiftPatternFormProps {
   onSave: (pattern: ShiftPattern) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: number) => void;
   existingPatterns: ShiftPattern[];
 }
 
@@ -18,35 +18,37 @@ export default function ShiftPatternForm({
   onDelete,
   existingPatterns,
 }: ShiftPatternFormProps) {
-  const [selectedPatternId, setSelectedPatternId] = useState('');
+  // Если выбран существующий паттерн, его ID хранится здесь (0 означает новый паттерн)
+  const [selectedPatternId, setSelectedPatternId] = useState<number>(0);
   const [pattern, setPattern] = useState<ShiftPattern>({
-    id: '',
-    name: '',
-    pattern: [false], // Изначально один день
+    ID: 0,
+    Name: '',
+    Pattern: [false], // Изначально правило на один день
   });
 
+  // При изменении выбранного паттерна или списка существующих правил обновляем форму
   useEffect(() => {
-    if (selectedPatternId) {
-      const selectedPattern = existingPatterns.find((p) => p.id === selectedPatternId);
+    if (selectedPatternId !== 0) {
+      const selectedPattern = existingPatterns.find((p) => p.ID === selectedPatternId);
       if (selectedPattern) {
         setPattern(selectedPattern);
       }
     } else {
-      setPattern({ id: '', name: '', pattern: [false] });
+      setPattern({ ID: 0, Name: '', Pattern: [false] });
     }
   }, [selectedPatternId, existingPatterns]);
 
   const addDay = () => {
     setPattern((prev) => ({
       ...prev,
-      pattern: [...prev.pattern, false],
+      Pattern: [...prev.Pattern, false],
     }));
   };
 
   const toggleDay = (dayIndex: number) => {
     setPattern((prev) => ({
       ...prev,
-      pattern: prev.pattern.map((isShift, index) =>
+      Pattern: prev.Pattern.map((isShift, index) =>
         index === dayIndex ? !isShift : isShift
       ),
     }));
@@ -54,16 +56,18 @@ export default function ShiftPatternForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ ...pattern, id: pattern.id || nanoid() });
-    setPattern({ id: '', name: '', pattern: [false] });
-    setSelectedPatternId('');
+    // Если правило новое (ID === 0), генерируем временный отрицательный ID
+    const newID = pattern.ID !== 0 ? pattern.ID : -Math.floor(Math.random() * 1000000);
+    onSave({ ...pattern, ID: newID });
+    setPattern({ ID: 0, Name: '', Pattern: [false] });
+    setSelectedPatternId(0);
   };
 
   const handleDelete = () => {
-    if (pattern.id) {
-      onDelete(pattern.id);
-      setPattern({ id: '', name: '', pattern: [false] });
-      setSelectedPatternId('');
+    if (pattern.ID !== 0) {
+      onDelete(pattern.ID);
+      setPattern({ ID: 0, Name: '', Pattern: [false] });
+      setSelectedPatternId(0);
     }
   };
 
@@ -73,13 +77,13 @@ export default function ShiftPatternForm({
       <div className="mb-2">
         <select
           value={selectedPatternId}
-          onChange={(e) => setSelectedPatternId(e.target.value)}
+          onChange={(e) => setSelectedPatternId(Number(e.target.value))}
           className="w-full p-2 border rounded"
         >
-          <option value="">Новое правило чередования</option>
+          <option value={0}>Новое правило чередования</option>
           {existingPatterns.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
+            <option key={p.ID} value={p.ID}>
+              {p.Name}
             </option>
           ))}
         </select>
@@ -87,8 +91,10 @@ export default function ShiftPatternForm({
       <div className="mb-2">
         <input
           type="text"
-          value={pattern.name}
-          onChange={(e) => setPattern((prev) => ({ ...prev, name: e.target.value }))}
+          value={pattern.Name}
+          onChange={(e) =>
+            setPattern((prev) => ({ ...prev, Name: e.target.value }))
+          }
           placeholder="Название правила чередования"
           className="w-full p-2 border rounded"
           required
@@ -96,7 +102,7 @@ export default function ShiftPatternForm({
       </div>
       <div className="mb-2">
         <div className="flex gap-2">
-          {pattern.pattern.map((isShift, index) => (
+          {pattern.Pattern.map((isShift, index) => (
             <label key={index} className="flex items-center gap-1">
               <input
                 type="checkbox"
@@ -109,15 +115,22 @@ export default function ShiftPatternForm({
         </div>
       </div>
       <div className="mb-2">
-        <button type="button" onClick={addDay} className="px-2 py-1 bg-blue-500 text-white rounded">
+        <button
+          type="button"
+          onClick={addDay}
+          className="px-2 py-1 bg-blue-500 text-white rounded"
+        >
           Добавить день
         </button>
       </div>
       <div className="flex justify-between">
-        <button type="submit" className="px-4 py-2 bg-green-500 text-white rounded">
-          {pattern.id ? 'Обновить' : 'Сохранить'} правило чередования
+        <button
+          type="submit"
+          className="px-4 py-2 bg-green-500 text-white rounded"
+        >
+          {pattern.ID !== 0 ? 'Обновить' : 'Сохранить'} правило чередования
         </button>
-        {pattern.id && (
+        {pattern.ID !== 0 && (
           <button
             type="button"
             onClick={handleDelete}

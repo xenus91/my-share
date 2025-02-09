@@ -1,105 +1,110 @@
-//index.ts
+// types/index.ts
+
+// Элемент списка для периодов занятости (обычно хранится в отдельном списке, связанном по Lookup)
 export interface WorkloadPeriod {
-  id: string;
-  startDate: string;  // YYYY-MM-DD
-  endDate: string;    // YYYY-MM-DD
-  fraction: number;   // Доля занятости, от 0 до 1 (например, 0.5 = 50%)
+  ID: number;           // уникальный числовой идентификатор из SharePoint
+  StartDate: string;    // формат YYYY-MM-DD
+  EndDate: string;      // формат YYYY-MM-DD
+  Fraction: number;     // от 0 до 1 (например, 0.5 = 50%)
+  EmployeeId: number;  // ✅ Добавляем это поле!
 }
 
+// Элемент списка "Employees"
 export interface Employee {
-  id: string;
-  name: string;
-  position: string;
-  department: string;
-  office: string;
-
-  // Новый массив периодов долей занятости
-  workloadPeriods: WorkloadPeriod[];
+  ID: number;           // уникальный числовой идентификатор из SharePoint
+  Title: string;        // имя сотрудника (используем стандартное поле Title)
+  JobTitle: string;     // должность сотрудника
+  Department: string;
+  Office: string;
+  workloadPeriods: WorkloadPeriod[];  // связанные периоды занятости (можно заполнять через расширенный запрос)
 }
+
+// Интерфейс для правил чередования смен
 export interface ShiftPattern {
-  id: string;
-  name: string;
-  pattern: boolean[];
+  ID: number;           // уникальный идентификатор (GUID)
+  Name: string;
+  Pattern: boolean[];   // массив, определяющий паттерн чередования
 }
 
-
+// Интерфейс для типа смены
 export interface ShiftTypeDefinition {
-  id: string;
-  name: string;
-  backgroundColor: string;
-  textColor: string;
-  affectsWorkingNorm: boolean; // Указывает, влияет ли тип смены на рабочую норму
-  requiredStartEndTime: boolean; // Новое свойство, указывает, обязательны ли начало/окончание смены и перерыв
-  description?: string;
-  defaultStartTime: string; // Начало смены по умолчанию
-  defaultEndTime: string; // Окончание смены по умолчанию
-  defaultBreakStart: string; // Начало перерыва по умолчанию
-  defaultBreakEnd: string; // Окончание перерыва по умолчанию
+  ID: number;                   // уникальный числовой идентификатор из SharePoint
+  Name: string;
+  BackgroundColor: string;
+  TextColor: string;
+  AffectsWorkingNorm: boolean;  // влияет ли тип смены на рабочую норму
+  RequiredStartEndTime: boolean;// обязательны ли время начала/окончания смены и перерыв
+  Description?: string;
+  DefaultStartTime: string;     // время начала смены по умолчанию
+  DefaultEndTime: string;       // время окончания смены по умолчанию
+  DefaultBreakStart: string;    // время начала перерыва по умолчанию
+  DefaultBreakEnd: string;      // время окончания перерыва по умолчанию
 }
 
+// Интерфейс для смены
 export interface Shift {
-  id: string;
-  employeeId: string; // ID сотрудника
-  date: string; // Дата смены
-  shiftTypeId: string; // ID типа смены
-  startTime: string; // Время начала смены
-  endTime: string; // Время окончания смены
-  breakStart: string; // Время начала перерыва
-  breakEnd: string; // Время окончания перерыва
-  hours: number; // Количество рабочих часов
-  isNightShift: boolean; // Указывает, является ли смена ночной
+  ID: number;              // уникальный числовой идентификатор смены из SharePoint
+  EmployeeId: number;      // ссылка (Lookup) на сотрудника (Employee.ID)
+  Date: string;            // дата смены (YYYY-MM-DD)
+  ShiftTypeId: number;     // ссылка (Lookup) на тип смены (ShiftTypeDefinition.ID)
+  StartTime: string;       // время начала смены
+  EndTime: string;         // время окончания смены
+  BreakStart: string;      // время начала перерыва
+  BreakEnd: string;        // время окончания перерыва
+  Hours: number;           // количество рабочих часов
+  IsNightShift: boolean;   // является ли смена ночной
 }
 
+// Интерфейс для записи времени (если используется отдельный список)
 export interface TimeEntry {
-  id: string;
-  employeeId: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  breakDuration: number; // Длительность перерыва
-  totalHours: number; // Общее количество часов
-  status: 'pending' | 'approved' | 'rejected'; // Статус записи
-  notes?: string; // Дополнительные заметки
+  ID: number;
+  EmployeeId: number;
+  Date: string;
+  StartTime: string;
+  EndTime: string;
+  BreakDuration: number;
+  TotalHours: number;
+  Status: 'pending' | 'approved' | 'rejected';
+  Notes?: string;
 }
 
+// Интерфейс для календарного дня (например, для производственного календаря)
 export interface CalendarDay {
-  date: string; // Дата
-  type: 'п' | 'в' | 'пп'; // Тип дня: праздничный, выходной, предпраздничный
-  description: string; // Описание
+  Date: string;
+  Type: 'п' | 'в' | 'пп';  // 'п' – праздничный, 'в' – выходной, 'пп' – предпраздничный
+  Description: string;
 }
 
-// ../types/index.ts
-
+// Интерфейс для чередования смен (если используется отдельный список)
 export interface ShiftRotation {
-  id: string; // Уникальный идентификатор
-  name: string; // Название чередования
-  pattern: { shiftTypeId: string; isSelected: boolean }[]; // Паттерн чередования
+  ID: string;
+  Name: string;
+  Pattern: { ShiftTypeId: string; IsSelected: boolean }[];
 }
 
-
-
+// Пример производственного календаря 2025
 export const productionCalendar2025: CalendarDay[] = [
-  { date: '2025-01-01', type: 'п', description: 'Праздничный' },
-  { date: '2025-01-02', type: 'п', description: 'Праздничный' },
-  { date: '2025-01-03', type: 'п', description: 'Праздничный' },
-  { date: '2025-01-04', type: 'п', description: 'Праздничный' },
-  { date: '2025-01-05', type: 'п', description: 'Праздничный' },
-  { date: '2025-01-06', type: 'п', description: 'Праздничный' },
-  { date: '2025-01-07', type: 'п', description: 'Праздничный' },
-  { date: '2025-01-08', type: 'п', description: 'Праздничный' },
-  { date: '2025-02-23', type: 'п', description: 'Праздничный' },
-  { date: '2025-03-08', type: 'п', description: 'Праздничный' },
-  { date: '2025-05-01', type: 'п', description: 'Праздничный' },
-  { date: '2025-05-09', type: 'п', description: 'Праздничный' },
-  { date: '2025-06-12', type: 'п', description: 'Праздничный' },
-  { date: '2025-11-04', type: 'п', description: 'Праздничный' },
-  { date: '2025-05-02', type: 'в', description: 'Выходной' },
-  { date: '2025-12-31', type: 'в', description: 'Выходной' },
-  { date: '2025-05-08', type: 'в', description: 'Выходной' },
-  { date: '2025-06-13', type: 'в', description: 'Выходной' },
-  { date: '2025-11-03', type: 'в', description: 'Выходной' },
-  { date: '2025-03-07', type: 'пп', description: 'Предпраздничный' },
-  { date: '2025-04-30', type: 'пп', description: 'Предпраздничный' },
-  { date: '2025-06-11', type: 'пп', description: 'Предпраздничный' },
-  { date: '2025-11-01', type: 'пп', description: 'Предпраздничный' },
+  { Date: '2025-01-01', Type: 'п', Description: 'Праздничный' },
+  { Date: '2025-01-02', Type: 'п', Description: 'Праздничный' },
+  { Date: '2025-01-03', Type: 'п', Description: 'Праздничный' },
+  { Date: '2025-01-04', Type: 'п', Description: 'Праздничный' },
+  { Date: '2025-01-05', Type: 'п', Description: 'Праздничный' },
+  { Date: '2025-01-06', Type: 'п', Description: 'Праздничный' },
+  { Date: '2025-01-07', Type: 'п', Description: 'Праздничный' },
+  { Date: '2025-01-08', Type: 'п', Description: 'Праздничный' },
+  { Date: '2025-02-23', Type: 'п', Description: 'Праздничный' },
+  { Date: '2025-03-08', Type: 'п', Description: 'Праздничный' },
+  { Date: '2025-05-01', Type: 'п', Description: 'Праздничный' },
+  { Date: '2025-05-09', Type: 'п', Description: 'Праздничный' },
+  { Date: '2025-06-12', Type: 'п', Description: 'Праздничный' },
+  { Date: '2025-11-04', Type: 'п', Description: 'Праздничный' },
+  { Date: '2025-05-02', Type: 'в', Description: 'Выходной' },
+  { Date: '2025-12-31', Type: 'в', Description: 'Выходной' },
+  { Date: '2025-05-08', Type: 'в', Description: 'Выходной' },
+  { Date: '2025-06-13', Type: 'в', Description: 'Выходной' },
+  { Date: '2025-11-03', Type: 'в', Description: 'Выходной' },
+  { Date: '2025-03-07', Type: 'пп', Description: 'Предпраздничный' },
+  { Date: '2025-04-30', Type: 'пп', Description: 'Предпраздничный' },
+  { Date: '2025-06-11', Type: 'пп', Description: 'Предпраздничный' },
+  { Date: '2025-11-01', Type: 'пп', Description: 'Предпраздничный' },
 ];

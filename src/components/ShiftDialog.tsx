@@ -18,10 +18,11 @@ import { calculateShiftHours } from "../lib/utils";
 
 interface ShiftDialogProps {
   shift?: Shift;
-  employeeId: string;
+  /** Пришедший извне ID сотрудника – строка, а в Shift.EmployeeId нужен number */
+  employeeId: string; 
   date: string;
   shiftTypes: ShiftTypeDefinition[];
-  onSave: (shift: Omit<Shift, "id">) => void;
+  onSave: (shift: Omit<Shift, "ID">) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -35,29 +36,35 @@ export function ShiftDialog({
   open,
   onOpenChange,
 }: ShiftDialogProps) {
+  // Сохраняем ShiftTypeId как число, поэтому если shiftTypes[0]?.ID отсутствует, подставим 0
   const [formData, setFormData] = useState({
-    shiftTypeId: shift?.shiftTypeId || shiftTypes[0]?.id || "",
-    startTime: shift?.startTime || shiftTypes[0]?.defaultStartTime || "09:00",
-    endTime: shift?.endTime || shiftTypes[0]?.defaultEndTime || "17:00",
-    breakStart: shift?.breakStart || shiftTypes[0]?.defaultBreakStart || "13:00",
-    breakEnd: shift?.breakEnd || shiftTypes[0]?.defaultBreakEnd || "14:00",
+    shiftTypeId: shift?.ShiftTypeId ?? shiftTypes[0]?.ID ?? 0,
+    startTime: shift?.StartTime ?? shiftTypes[0]?.DefaultStartTime ?? "09:00",
+    endTime: shift?.EndTime ?? shiftTypes[0]?.DefaultEndTime ?? "17:00",
+    breakStart: shift?.BreakStart ?? shiftTypes[0]?.DefaultBreakStart ?? "13:00",
+    breakEnd: shift?.BreakEnd ?? shiftTypes[0]?.DefaultBreakEnd ?? "14:00",
   });
 
-  const handleShiftTypeChange = (shiftTypeId: string) => {
-    const selectedType = shiftTypes.find((type) => type.id === shiftTypeId);
+  // Изменяем тип смены (ShiftTypeId), парсим значение как число
+  const handleShiftTypeChange = (rawValue: string) => {
+    const newShiftTypeId = Number(rawValue);
+    const selectedType = shiftTypes.find((type) => type.ID === newShiftTypeId);
     if (!selectedType) return;
+
     setFormData({
-      shiftTypeId,
-      startTime: selectedType.defaultStartTime,
-      endTime: selectedType.defaultEndTime,
-      breakStart: selectedType.defaultBreakStart,
-      breakEnd: selectedType.defaultBreakEnd,
+      shiftTypeId: newShiftTypeId,
+      startTime: selectedType.DefaultStartTime,
+      endTime: selectedType.DefaultEndTime,
+      breakStart: selectedType.DefaultBreakStart,
+      breakEnd: selectedType.DefaultBreakEnd,
     });
   };
 
+  // Отправка формы
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Считаем продолжительность смены
     const hours = calculateShiftHours(
       formData.startTime,
       formData.endTime,
@@ -65,18 +72,20 @@ export function ShiftDialog({
       formData.breakEnd
     );
 
+    // Определяем, что смена считается ночной, если время окончания меньше времени начала
     const isNightShift = formData.endTime < formData.startTime;
 
+    // Вызываем onSave, передавая поля с заглавной буквы
     onSave({
-      employeeId,
-      date,
-      shiftTypeId: formData.shiftTypeId,
-      startTime: formData.startTime,
-      endTime: formData.endTime,
-      breakStart: formData.breakStart,
-      breakEnd: formData.breakEnd,
-      hours,
-      isNightShift,
+      EmployeeId: Number(employeeId),
+      Date: date,
+      ShiftTypeId: formData.shiftTypeId,
+      StartTime: formData.startTime,
+      EndTime: formData.endTime,
+      BreakStart: formData.breakStart,
+      BreakEnd: formData.breakEnd,
+      Hours: hours,
+      IsNightShift: isNightShift,
     });
 
     onOpenChange(false);
@@ -87,6 +96,8 @@ export function ShiftDialog({
       <DialogTitle>{shift ? "Изменить смену" : "Добавить смену"}</DialogTitle>
       <DialogContent>
         <DialogContentText>Выберите тип и введите время</DialogContentText>
+
+        {/* Форма: тип смены и времена */}
         <form onSubmit={handleSubmit}>
           <FormControl fullWidth margin="normal" required>
             <InputLabel id="shift-type-label">Тип смены</InputLabel>
@@ -98,8 +109,8 @@ export function ShiftDialog({
               onChange={(e) => handleShiftTypeChange(e.target.value as string)}
             >
               {shiftTypes.map((type) => (
-                <MenuItem key={type.id} value={type.id}>
-                  {type.name}
+                <MenuItem key={type.ID} value={type.ID}>
+                  {type.Name}
                 </MenuItem>
               ))}
             </Select>
@@ -113,7 +124,7 @@ export function ShiftDialog({
                 type="time"
                 value={formData.startTime}
                 onChange={(e) =>
-                  setFormData({ ...formData, startTime: e.target.value })
+                  setFormData((prev) => ({ ...prev, startTime: e.target.value }))
                 }
                 InputLabelProps={{ shrink: true }}
                 inputProps={{ step: 300 }}
@@ -128,7 +139,7 @@ export function ShiftDialog({
                 type="time"
                 value={formData.endTime}
                 onChange={(e) =>
-                  setFormData({ ...formData, endTime: e.target.value })
+                  setFormData((prev) => ({ ...prev, endTime: e.target.value }))
                 }
                 InputLabelProps={{ shrink: true }}
                 inputProps={{ step: 300 }}
@@ -146,7 +157,7 @@ export function ShiftDialog({
                 type="time"
                 value={formData.breakStart}
                 onChange={(e) =>
-                  setFormData({ ...formData, breakStart: e.target.value })
+                  setFormData((prev) => ({ ...prev, breakStart: e.target.value }))
                 }
                 InputLabelProps={{ shrink: true }}
                 inputProps={{ step: 300 }}
@@ -161,7 +172,7 @@ export function ShiftDialog({
                 type="time"
                 value={formData.breakEnd}
                 onChange={(e) =>
-                  setFormData({ ...formData, breakEnd: e.target.value })
+                  setFormData((prev) => ({ ...prev, breakEnd: e.target.value }))
                 }
                 InputLabelProps={{ shrink: true }}
                 inputProps={{ step: 300 }}

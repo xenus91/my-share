@@ -1,4 +1,4 @@
-import  { useState } from "react";
+import { useState } from "react";
 import type { ICellRendererParams } from "ag-grid-community";
 import { Box, Button, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
@@ -8,21 +8,21 @@ import { ShiftDialog } from "./ShiftDialog";
 
 interface ExtraCellRendererParams {
   shiftTypes: ShiftTypeDefinition[];
-  handleAddShift: (employeeId: string, date: string, shiftData: Omit<Shift, "id">) => void;
+  handleAddShift: (employeeId: number, date: string, shiftData: Omit<Shift, "ID">) => void;
   handleUpdateShift: (
-    employeeId: string,
+    employeeId: number,
     date: string,
-    shiftId: string,
-    shiftData: Omit<Shift, "id">
+    shiftId: number,
+    shiftData: Omit<Shift, "ID">
   ) => void;
-  handleDeleteShift: (employeeId: string, date: string, shiftId: string) => void;
+  handleDeleteShift: (employeeId: number, date: string, shiftId: number) => void;
 }
 
 export function ShiftCellRenderer(
   props: ICellRendererParams & ExtraCellRendererParams
 ) {
   const { shiftTypes, handleAddShift, handleUpdateShift, handleDeleteShift } = props;
-  const { employeeId = "", date = "", shifts = [] } = props.value || {};
+  const { employeeId = 0, date = "", shifts = [] } = props.value || {};
   const workloadPeriods = props.data.workloadPeriods || [];
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -34,10 +34,10 @@ export function ShiftCellRenderer(
   if (workloadPeriods.length > 0) {
     for (const period of workloadPeriods) {
       if (
-        (!period.startDate || period.startDate <= date) &&
-        (!period.endDate || period.endDate >= date)
+        (!period.StartDate || period.StartDate <= date) &&
+        (!period.EndDate || period.EndDate >= date)
       ) {
-        fraction = period.fraction;
+        fraction = period.Fraction;
       }
     }
   }
@@ -56,7 +56,7 @@ export function ShiftCellRenderer(
       {/* Левая часть: кнопка "Добавить смену" */}
       <Box
         sx={{
-          width: "16.66%", // ~2/12
+          width: "16.66%",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -85,10 +85,10 @@ export function ShiftCellRenderer(
         />
       </Box>
 
-      {/* Правая часть: блок "Доля" и список смен, располагаемые в столбец */}
+      {/* Правая часть: блок "Доля" и список смен */}
       <Box
         sx={{
-          width: "83.33%", // ~10/12
+          width: "83.33%",
           height: "100%",
           overflowY: "auto",
           display: "flex",
@@ -102,13 +102,13 @@ export function ShiftCellRenderer(
         )}
         {shifts.map((shift: Shift) => (
           <ShiftCard
-            key={shift.id}
+            key={shift.ID}
             shift={shift}
             shiftTypes={shiftTypes}
             employeeId={employeeId}
             date={date}
-            onUpdateShift={(data) => handleUpdateShift(employeeId, date, shift.id, data)}
-            onDeleteShift={(shiftId) => handleDeleteShift(employeeId, date, shiftId)}
+            onUpdateShift={(data) => handleUpdateShift(employeeId, date, shift.ID, data)}
+            onDeleteShift={(shiftId) => handleDeleteShift(employeeId, date, Number(shiftId))}
           />
         ))}
       </Box>

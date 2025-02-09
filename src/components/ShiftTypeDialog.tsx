@@ -19,9 +19,9 @@ import { ShiftTypeDefinition } from "../types";
 
 interface ShiftTypeDialogProps {
   shiftTypes: ShiftTypeDefinition[];
-  onSave: (shiftType: Omit<ShiftTypeDefinition, "id">) => void;
-  onUpdate: (id: string, shiftType: Omit<ShiftTypeDefinition, "id">) => void;
-  onDelete: (id: string) => void;
+  onSave: (shiftType: Omit<ShiftTypeDefinition, "ID">) => void;
+  onUpdate: (id: number, shiftType: Omit<ShiftTypeDefinition, "ID">) => void;
+  onDelete: (id: number) => void;
   trigger: React.ReactNode;
 }
 
@@ -37,31 +37,31 @@ export function ShiftTypeDialog({
     null
   );
   const [formData, setFormData] = useState({
-    name: "",
-    backgroundColor: "#E5EDFF",
-    textColor: "#1E40AF",
-    affectsWorkingNorm: true,
-    requiredStartEndTime: true,
-    description: "",
-    defaultStartTime: "09:00",
-    defaultEndTime: "17:00",
-    defaultBreakStart: "13:00",
-    defaultBreakEnd: "14:00",
+    Name: "",
+    BackgroundColor: "#E5EDFF",
+    TextColor: "#1E40AF",
+    AffectsWorkingNorm: true,
+    RequiredStartEndTime: true,
+    Description: "",
+    DefaultStartTime: "09:00",
+    DefaultEndTime: "17:00",
+    DefaultBreakStart: "13:00",
+    DefaultBreakEnd: "14:00",
   });
 
   const handleTypeSelect = (type: ShiftTypeDefinition) => {
     setSelectedType(type);
     setFormData({
-      name: type.name,
-      backgroundColor: type.backgroundColor,
-      textColor: type.textColor,
-      affectsWorkingNorm: type.affectsWorkingNorm,
-      requiredStartEndTime: type.requiredStartEndTime,
-      description: type.description || "",
-      defaultStartTime: type.defaultStartTime,
-      defaultEndTime: type.defaultEndTime,
-      defaultBreakStart: type.defaultBreakStart,
-      defaultBreakEnd: type.defaultBreakEnd,
+      Name: type.Name,
+      BackgroundColor: type.BackgroundColor,
+      TextColor: type.TextColor,
+      AffectsWorkingNorm: type.AffectsWorkingNorm,
+      RequiredStartEndTime: type.RequiredStartEndTime,
+      Description: type.Description || "",
+      DefaultStartTime: type.DefaultStartTime,
+      DefaultEndTime: type.DefaultEndTime,
+      DefaultBreakStart: type.DefaultBreakStart,
+      DefaultBreakEnd: type.DefaultBreakEnd,
     });
   };
 
@@ -69,15 +69,15 @@ export function ShiftTypeDialog({
     e.preventDefault();
     const dataToSave = { ...formData };
 
-    if (!dataToSave.requiredStartEndTime) {
-      dataToSave.defaultStartTime = "00:00";
-      dataToSave.defaultEndTime = "00:00";
-      dataToSave.defaultBreakStart = "00:00";
-      dataToSave.defaultBreakEnd = "00:00";
+    if (!dataToSave.RequiredStartEndTime) {
+      dataToSave.DefaultStartTime = "00:00";
+      dataToSave.DefaultEndTime = "00:00";
+      dataToSave.DefaultBreakStart = "00:00";
+      dataToSave.DefaultBreakEnd = "00:00";
     }
 
     if (selectedType) {
-      onUpdate(selectedType.id, dataToSave);
+      onUpdate(selectedType.ID, dataToSave);
     } else {
       onSave(dataToSave);
     }
@@ -85,8 +85,8 @@ export function ShiftTypeDialog({
   };
 
   const handleDelete = (type: ShiftTypeDefinition) => {
-    onDelete(type.id);
-    if (selectedType?.id === type.id) {
+    onDelete(type.ID);
+    if (selectedType?.ID === type.ID) {
       resetForm();
     }
   };
@@ -94,16 +94,16 @@ export function ShiftTypeDialog({
   const resetForm = () => {
     setSelectedType(null);
     setFormData({
-      name: "",
-      backgroundColor: "#E5EDFF",
-      textColor: "#1E40AF",
-      affectsWorkingNorm: true,
-      requiredStartEndTime: true,
-      description: "",
-      defaultStartTime: "09:00",
-      defaultEndTime: "17:00",
-      defaultBreakStart: "13:00",
-      defaultBreakEnd: "14:00",
+      Name: "",
+      BackgroundColor: "#E5EDFF",
+      TextColor: "#1E40AF",
+      AffectsWorkingNorm: true,
+      RequiredStartEndTime: true,
+      Description: "",
+      DefaultStartTime: "09:00",
+      DefaultEndTime: "17:00",
+      DefaultBreakStart: "13:00",
+      DefaultBreakEnd: "14:00",
     });
   };
 
@@ -139,10 +139,10 @@ export function ShiftTypeDialog({
                 }}
               >
                 {shiftTypes.map((type) => {
-                  const isSelected = selectedType?.id === type.id;
+                  const isSelected = selectedType?.ID === type.ID;
                   return (
                     <Box
-                      key={type.id}
+                      key={type.ID}
                       onClick={() => handleTypeSelect(type)}
                       sx={{
                         p: 2,
@@ -167,7 +167,7 @@ export function ShiftTypeDialog({
                         }}
                       >
                         <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                          {type.name}
+                          {type.Name}
                         </Typography>
                         <Box sx={{ display: "flex", gap: 1 }}>
                           <IconButton
@@ -197,12 +197,12 @@ export function ShiftTypeDialog({
                           px: 1,
                           py: 0.5,
                           borderRadius: 1,
-                          backgroundColor: type.backgroundColor,
-                          color: type.textColor,
+                          backgroundColor: type.BackgroundColor,
+                          color: type.TextColor,
                           fontSize: "0.75rem",
                         }}
                       >
-                        {type.description || "Нет описания"}
+                        {type.Description || "Нет описания"}
                       </Box>
                     </Box>
                   );
@@ -221,9 +221,9 @@ export function ShiftTypeDialog({
                 required
                 label="Название"
                 id="name"
-                value={formData.name}
+                value={formData.Name}
                 onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
+                  setFormData({ ...formData, Name: e.target.value })
                 }
                 sx={{ mb: 2 }}
               />
@@ -234,9 +234,9 @@ export function ShiftTypeDialog({
                   label="Цвет фона"
                   id="backgroundColor"
                   type="color"
-                  value={formData.backgroundColor}
+                  value={formData.BackgroundColor}
                   onChange={(e) =>
-                    setFormData({ ...formData, backgroundColor: e.target.value })
+                    setFormData({ ...formData, BackgroundColor: e.target.value })
                   }
                   InputProps={{
                     sx: { width: 56, height: 56, p: 0, border: "none" },
@@ -246,9 +246,9 @@ export function ShiftTypeDialog({
                   label="Цвет текста"
                   id="textColor"
                   type="color"
-                  value={formData.textColor}
+                  value={formData.TextColor}
                   onChange={(e) =>
-                    setFormData({ ...formData, textColor: e.target.value })
+                    setFormData({ ...formData, TextColor: e.target.value })
                   }
                   InputProps={{
                     sx: { width: 56, height: 56, p: 0, border: "none" },
@@ -261,11 +261,11 @@ export function ShiftTypeDialog({
                 control={
                   <Switch
                     id="requiredStartEndTime"
-                    checked={formData.requiredStartEndTime}
+                    checked={formData.RequiredStartEndTime}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        requiredStartEndTime: e.target.checked,
+                        RequiredStartEndTime: e.target.checked,
                       })
                     }
                   />
@@ -275,7 +275,7 @@ export function ShiftTypeDialog({
               />
 
               {/* Временные поля */}
-              {formData.requiredStartEndTime && (
+              {formData.RequiredStartEndTime && (
                 <>
                   <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
                     <TextField
@@ -284,11 +284,11 @@ export function ShiftTypeDialog({
                       id="defaultStartTime"
                       label="Время начала по умолчанию"
                       type="time"
-                      value={formData.defaultStartTime}
+                      value={formData.DefaultStartTime}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          defaultStartTime: e.target.value,
+                          DefaultStartTime: e.target.value,
                         })
                       }
                       InputLabelProps={{ shrink: true }}
@@ -299,11 +299,11 @@ export function ShiftTypeDialog({
                       id="defaultEndTime"
                       label="Время окончания по умолчанию"
                       type="time"
-                      value={formData.defaultEndTime}
+                      value={formData.DefaultEndTime}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          defaultEndTime: e.target.value,
+                          DefaultEndTime: e.target.value,
                         })
                       }
                       InputLabelProps={{ shrink: true }}
@@ -316,11 +316,11 @@ export function ShiftTypeDialog({
                       id="defaultBreakStart"
                       label="Время начала перерыва по умолчанию"
                       type="time"
-                      value={formData.defaultBreakStart}
+                      value={formData.DefaultBreakStart}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          defaultBreakStart: e.target.value,
+                          DefaultBreakStart: e.target.value,
                         })
                       }
                       InputLabelProps={{ shrink: true }}
@@ -331,11 +331,11 @@ export function ShiftTypeDialog({
                       id="defaultBreakEnd"
                       label="Время окончания перерыва по умолчанию"
                       type="time"
-                      value={formData.defaultBreakEnd}
+                      value={formData.DefaultBreakEnd}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          defaultBreakEnd: e.target.value,
+                          DefaultBreakEnd: e.target.value,
                         })
                       }
                       InputLabelProps={{ shrink: true }}
@@ -349,11 +349,11 @@ export function ShiftTypeDialog({
                 control={
                   <Switch
                     id="affectsWorkingNorm"
-                    checked={formData.affectsWorkingNorm}
+                    checked={formData.AffectsWorkingNorm}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        affectsWorkingNorm: e.target.checked,
+                        AffectsWorkingNorm: e.target.checked,
                       })
                     }
                   />
@@ -367,9 +367,9 @@ export function ShiftTypeDialog({
                 fullWidth
                 id="description"
                 label="Описание"
-                value={formData.description}
+                value={formData.Description}
                 onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
+                  setFormData({ ...formData, Description: e.target.value })
                 }
                 sx={{ mb: 2 }}
               />
