@@ -54,6 +54,7 @@ import AssignShiftPatternForm from './AssignShiftPatternForm';
 import { ShiftCellRenderer } from './ShiftCellRenderer';
 import { EmployeeDialog } from './EmployeeDialog';
 import { ShiftTypeDialog } from './ShiftTypeDialog';
+import { getEmployee } from "../services/userService";
 
 type ViewPeriod = 'week' | 'month' | 'year';
 
@@ -77,6 +78,26 @@ export default function TimeSheet() {
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewPeriod, setViewPeriod] = useState<ViewPeriod>('week');
+
+
+
+useEffect(() => {
+  async function loadEmployees() {
+    try {
+      const employees = await getEmployee();
+      console.log("✅ Загружены сотрудники:", employees);
+      const entries: TimeSheetEntry[] = employees.map((emp: Employee) => ({
+        ...emp,
+        shifts: {},
+        workloadPeriods: emp.workloadPeriods || [],
+      }));
+      setTimeData(entries);
+    } catch (error) {
+      console.error("❌ Ошибка загрузки сотрудников:", error);
+    }
+  }
+  loadEmployees();
+}, []);
 
   // Типы смен (ID — число)
   const [shiftTypes, setShiftTypes] = useState<ShiftTypeDefinition[]>([
