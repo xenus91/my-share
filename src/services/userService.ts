@@ -68,6 +68,29 @@ export async function getUserIdByLoginName(loginName: string): Promise<string | 
     }
 }
 
+// Функция для загрузки сотрудников из списка "Employees"
+export async function getEmployee(): Promise<Employee[]> {
+  try {
+    // GET-запрос не требует получения Request Digest
+    const response = await apiClient.get(
+      "/web/lists/GetByTitle('Employees')/items",
+      {
+        headers: {
+          Accept: "application/json;odata=verbose"
+        }
+      }
+    );
+    console.log("✅ Получены сотрудники:", response.data);
+    // В odata=verbose данные списка находятся в response.data.d.results
+    return response.data.d.results;
+  } catch (error) {
+    console.error("❌ Ошибка загрузки сотрудников:", error);
+    throw error;
+  }
+}
+
+
+
 // Создание сотрудника в списке "Employees"
 export async function createEmployee(payload: {
     preferredName: string;
