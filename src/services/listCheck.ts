@@ -208,3 +208,85 @@ export async function ensureWorkloadPeriodsListExists(): Promise<void> {
     }
   }
 }
+
+
+export async function ensureShiftTypeListExists(): Promise<void> {
+  try {
+    // Проверяем существование списка
+    await apiClient.get("/web/lists/GetByTitle('ShiftType')", {
+      headers: { Accept: "application/json;odata=verbose" },
+    });
+    console.log("✅ Список 'ShiftType' найден");
+  } catch (error: any) {
+    // Если 404, значит список не существует — создаём
+    if (error.response && error.response.status === 404) {
+      console.log("❌ Список 'ShiftType' не найден. Создаем...");
+
+      try {
+        const digest = await getRequestDigest();
+        if (!digest) throw new Error("❌ Ошибка: X-RequestDigest не получен!");
+
+        // 1. Создаем сам список
+        const listPayload = {
+          __metadata: { type: "SP.List" },
+          Title: "ShiftType",
+          BaseTemplate: 100,
+          Description: "Типы смен сотрудников",
+        };
+
+        const createListResponse = await apiClient.post("/web/lists", listPayload, {
+          headers: {
+            Accept: "application/json;odata=verbose",
+            "Content-Type": "application/json;odata=verbose",
+            "X-Requested-With": "XMLHttpRequest",
+            "X-RequestDigest": digest,
+          },
+        });
+        console.log("✅ Список 'ShiftType' создан:", createListResponse.data);
+
+        // 2. Добавляем обычные поля
+        const fieldsUrl = `/web/lists/GetByTitle('ShiftType')/fields`;
+        const fields = [
+          { Title: "Name", FieldTypeKind: 2 }, // Text
+          { Title: "BackgroundColor", FieldTypeKind: 2 }, // Text
+          { Title: "TextColor", FieldTypeKind: 2 }, // Text
+          { Title: "AffectsWorkingNorm", FieldTypeKind: 8 }, // Boolean
+          { Title: "RequiredStartEndTime", FieldTypeKind: 8 }, // Boolean
+          { Title: "Description", FieldTypeKind: 2 }, // Text
+          { Title: "DefaultStartTime", FieldTypeKind: 2 }, // Text
+          { Title: "DefaultEndTime", FieldTypeKind: 2 }, // Text
+          { Title: "DefaultBreakStart", FieldTypeKind: 2 }, // Text
+          { Title: "DefaultBreakEnd", FieldTypeKind: 2 }, // Text
+        ];
+
+        for (const field of fields) {
+          await apiClient.post(
+            fieldsUrl,
+            {
+              __metadata: { type: "SP.Field" },
+              Title: field.Title,
+              FieldTypeKind: field.FieldTypeKind,
+            },
+            {
+              headers: {
+                Accept: "application/json;odata=verbose",
+                "Content-Type": "application/json;odata=verbose",
+                "X-Requested-With": "XMLHttpRequest",
+                "X-RequestDigest": digest,
+              },
+            }
+          );
+          console.log(`✅ Поле '${field.Title}' добавлено.`);
+        }
+
+        console.log("✅ Все поля для 'ShiftType' добавлены.");
+      } catch (createError) {
+        console.error("❌ Ошибка создания списка 'ShiftType':", createError);
+        throw createError;
+      }
+    } else {
+      console.error("❌ Ошибка проверки списка 'ShiftType':", error);
+      throw error;
+    }
+  }
+}

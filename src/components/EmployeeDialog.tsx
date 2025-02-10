@@ -19,6 +19,7 @@ import {
   getUserIdByLoginName,
   getUserPropertiesByAccountName,
   createEmployee,
+  updateEmployee,
   createWorkloadPeriod,
   updateWorkloadPeriod,
   deleteWorkloadPeriod,
@@ -211,54 +212,75 @@ export function EmployeeDialog({
   // Отправка формы – создание сотрудника в SharePoint
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!login) return;
-    if (!userId) {
-      setError("Сначала выполните поиск пользователя");
+    if (!formData.Title || !formData.JobTitle || !formData.Department) {
+      setError("Заполните все обязательные поля");
       return;
     }
+  
     setLoading(true);
     setError(null);
+  
     try {
-      const payload = {
-        preferredName: formData.Title,
-        employeeId: userId,
-        jobTitle: formData.JobTitle,
-        department: formData.Department,
-        office: formData.Office,
-      };
-      const createdEmployee: any = await createEmployee(payload);
-      console.log("Создан сотрудник:", createdEmployee);
-      // В качестве lookup‑ID используем основной идентификатор из SharePoint (ID)
-      setLookupEmployeeId(createdEmployee.ID);
-      console.log("LookupEmployeeId =", createdEmployee.ID);
-      
-      // Передаём сотрудника через onSave (без поля ID)
-      onSave({
-        ID: createdEmployee.ID, // Передаём настоящий ID
-        Title: createdEmployee.Title,
-        JobTitle: createdEmployee.JobTitle,
-        Department: createdEmployee.Department,
-        Office: createdEmployee.Office,
-        workloadPeriods: formData.workloadPeriods,
-      });
-
+      if (employee) {
+        // ✅ Обновляем сотрудника
+        await updateEmployee(employee.ID, {
+          preferredName: formData.Title,
+          jobTitle: formData.JobTitle,
+          department: formData.Department,
+          office: formData.Office,
+        });
+  
+        console.log(`✅ Сотрудник (ID: ${employee.ID}) обновлён`);
+  
+        // 🔹 Локально обновляем состояние, чтобы UI сразу изменился
+        onSave({
+          ...employee,
+          Title: formData.Title,
+          JobTitle: formData.JobTitle,
+          Department: formData.Department,
+          Office: formData.Office,
+        });
+      } else {
+        // ✅ Создаём нового сотрудника
+        if (!userId) {
+          setError("Ошибка: Не найден userId.");
+          return;
+        }
+  
+        const payload = {
+          preferredName: formData.Title,
+          employeeId: userId.toString(), // ✅ Преобразуем `userId` в `string`
+          jobTitle: formData.JobTitle,
+          department: formData.Department,
+          office: formData.Office,
+        };
+  
+        const createdEmployee: any = await createEmployee(payload);
+        console.log("✅ Создан новый сотрудник:", createdEmployee);
+  
+        setLookupEmployeeId(createdEmployee.ID);
+  
+        onSave({
+          ID: createdEmployee.ID,
+          Title: createdEmployee.Title,
+          JobTitle: createdEmployee.JobTitle,
+          Department: createdEmployee.Department,
+          Office: createdEmployee.Office,
+          workloadPeriods: formData.workloadPeriods,
+        });
+      }
+  
       setIsOpen(false);
-      setFormData({
-        Title: "",
-        JobTitle: "",
-        Department: "",
-        Office: "",
-        workloadPeriods: [],
-      });
       setLogin("");
       setUserId(null);
     } catch (err: any) {
-      setError(err.message || "Ошибка при создании сотрудника");
+      setError(err.message || "Ошибка при сохранении сотрудника");
     } finally {
       setLoading(false);
     }
   };
-
+  
+  
   // Добавляем вывод логов (например, в консоль) при открытии формы, чтобы отобразить параметры сотрудника
   useEffect(() => {
     if (isOpen) {

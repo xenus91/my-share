@@ -108,44 +108,59 @@ export async function createEmployee(payload: {
 }
 
 
-export async function updateEmployee(spItemId: number, payload: {
-    preferredName: string;
-    employeeId: string;
-    jobTitle: string;
-    department: string;
-    office: string;
-  }): Promise<void> {
+export async function updateEmployee(
+    spItemId: number,
+    payload: {
+      preferredName: string;
+      jobTitle: string;
+      department: string;
+      office: string;
+    }
+  ): Promise<void> {
     try {
+  
+      // 2. Получаем свежий request digest
       const digest = await getRequestDigest();
+  
+      // 3. Формируем payload с правильными именами полей
       const updatePayload = {
         __metadata: { type: "SP.Data.EmployeesListItem" },
         Title: payload.preferredName,
-        EmployeeId: payload.employeeId,
         JobTitle: payload.jobTitle,
         Department: payload.department,
         Office: payload.office,
+        Modified: new Date().toISOString(), 
       };
   
-      await apiClient.post(
+      // 4. Отправляем запрос с необходимыми заголовками
+      const response = await apiClient.post(
         `/web/lists/GetByTitle('Employees')/items(${spItemId})`,
         updatePayload,
         {
           headers: {
             Accept: "application/json;odata=verbose",
             "Content-Type": "application/json;odata=verbose",
-            "X-Requested-With": "XMLHttpRequest",
             "X-RequestDigest": digest,
-            "IF-MATCH": "*",
+            "IF-MATCH": "*", // Важно для обновления
             "X-HTTP-Method": "MERGE",
           },
         }
       );
-      console.log("✅ Сотрудник обновлён в списке Employees");
-    } catch (error) {
-      console.error("❌ Ошибка обновления сотрудника:", error);
-      throw error;
+  
+      console.log(`✅ Сотрудник обновлён. Статус: ${response.status}`);
+    } catch (error: any) {
+      console.error("❌ Детали ошибки:", {
+        url: error.config?.url,
+        data: error.response?.data,
+        status: error.response?.status,
+      });
+      throw new Error(
+        `Ошибка обновления: ${error.response?.data?.error?.message || error.message}`
+      );
     }
   }
+  
+  
   
 
 
@@ -219,10 +234,9 @@ export async function updateWorkloadPeriod(periodId: number, period: WorkloadPer
             headers: {
                 Accept: "application/json;odata=verbose",
                 "Content-Type": "application/json;odata=verbose",
-                "X-Requested-With": "XMLHttpRequest",
                 "X-RequestDigest": digest,
-                "IF-MATCH": "*",  // Для обновления существующих записей
-                "X-HTTP-Method": "MERGE" // Обновление без создания новой записи
+                "IF-MATCH": "*",
+                "X-HTTP-Method": "MERGE",
             }
         });
 
@@ -238,22 +252,22 @@ export async function deleteWorkloadPeriod(periodId: number) {
     try {
         const digest = await getRequestDigest();
 
-        await apiClient.post(`/web/lists/GetByTitle('WorkloadPeriods')/items(${periodId})`, {}, {
+        // Используем метод recycle() для отправки элемента в корзину
+        await apiClient.post(`/web/lists/GetByTitle('WorkloadPeriods')/items(${periodId})/recycle()`, {}, {
             headers: {
                 Accept: "application/json;odata=verbose",
                 "X-Requested-With": "XMLHttpRequest",
-                "X-RequestDigest": digest,
-                "IF-MATCH": "*",
-                "X-HTTP-Method": "DELETE"
+                "X-RequestDigest": digest
             }
         });
 
-        console.log("✅ Период занятости удален.");
+        console.log("✅ Период занятости отправлен в корзину.");
     } catch (error) {
         console.error("❌ Ошибка удаления периода занятости:", error);
         throw error;
     }
 }
+
 
 
 

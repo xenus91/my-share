@@ -80,7 +80,7 @@ export default function TimeSheet() {
 
   // Типы смен (ID — число)
   const [shiftTypes, setShiftTypes] = useState<ShiftTypeDefinition[]>([
-    {
+   /* {
       ID: 1,
       Name: 'день',
       BackgroundColor: 'gray',
@@ -118,7 +118,7 @@ export default function TimeSheet() {
       DefaultEndTime: '00:00',
       DefaultBreakStart: '00:00',
       DefaultBreakEnd: '00:00',
-    },
+    },*/
   ]);
 
   // Список сотрудников. ID — число

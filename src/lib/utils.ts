@@ -10,10 +10,10 @@ export function cn(...inputs: ClassValue[]) {
 
 export function getDayNorm(date: Date): number {
   const dateString = format(date, 'yyyy-MM-dd');
-  const calendarDay = productionCalendar2025.find(day => day.date === dateString);
+  const calendarDay = productionCalendar2025.find(day => day.Date === dateString);
 
   if (calendarDay) {
-    switch (calendarDay.type) {
+    switch (calendarDay.Type) {
       case 'п':
       case 'в':
         return 0;
@@ -28,18 +28,18 @@ export function getDayNorm(date: Date): number {
 
 export function isHolidayDate(date: string): boolean {
   return productionCalendar2025.some(day => 
-    day.date === date && (day.type === 'п' || day.type === 'в')
+    day.Date === date && (day.Type === 'п' || day.Type === 'в')
   );
 }
 
 export function calculateHolidayHours(shift: Shift): number {
   console.log('Начало расчета праздничных часов', shift);
 
-  const shiftDate = parse(shift.date, 'yyyy-MM-dd', new Date());
+  const shiftDate = parse(shift.Date, 'yyyy-MM-dd', new Date());
 
   // Полные даты для начала и конца смены
-  let startDateTime = parse(shift.startTime, 'HH:mm', shiftDate);
-  let endDateTime = parse(shift.endTime, 'HH:mm', shiftDate);
+  let startDateTime = parse(shift.StartTime, 'HH:mm', shiftDate);
+  let endDateTime = parse(shift.EndTime, 'HH:mm', shiftDate);
 
   // Коррекция перехода через полночь
   if (endDateTime <= startDateTime) {
@@ -50,11 +50,11 @@ export function calculateHolidayHours(shift: Shift): number {
   console.log('Конец смены:', endDateTime);
 
   // Полные даты для перерыва
-  let breakStartDateTime = shift.breakStart
-    ? parse(shift.breakStart, 'HH:mm', shiftDate)
+  let breakStartDateTime = shift.BreakStart
+    ? parse(shift.BreakStart, 'HH:mm', shiftDate)
     : null;
-  let breakEndDateTime = shift.breakEnd
-    ? parse(shift.breakEnd, 'HH:mm', shiftDate)
+  let breakEndDateTime = shift.BreakEnd
+    ? parse(shift.BreakEnd, 'HH:mm', shiftDate)
     : null;
 
   // Коррекция для перерыва (если он выходит за рамки смены)
@@ -71,7 +71,7 @@ export function calculateHolidayHours(shift: Shift): number {
   console.log('Конец перерыва:', breakEndDateTime);
 
   // Получаем список всех праздничных дней
-  const holidays = productionCalendar2025.filter(day => day.type === 'п').map(day => day.date);
+  const holidays = productionCalendar2025.filter(day => day.Type === 'п').map(day => day.Date);
 
   console.log('Список праздничных дней:', holidays);
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -16,6 +16,12 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { ShiftTypeDefinition } from "../types";
+import {
+  createShiftType,
+  updateShiftType,
+  deleteShiftType,
+  getShiftTypes,
+} from "../services/shiftTypeService";
 
 interface ShiftTypeDialogProps {
   shiftTypes: ShiftTypeDefinition[];
@@ -25,14 +31,9 @@ interface ShiftTypeDialogProps {
   trigger: React.ReactNode;
 }
 
-export function ShiftTypeDialog({
-  shiftTypes,
-  onSave,
-  onUpdate,
-  onDelete,
-  trigger,
-}: ShiftTypeDialogProps) {
+export function ShiftTypeDialog({ trigger }: ShiftTypeDialogProps) {
   const [open, setOpen] = useState(false);
+  const [shiftTypes, setShiftTypes] = useState<ShiftTypeDefinition[]>([]);
   const [selectedType, setSelectedType] = useState<ShiftTypeDefinition | null>(
     null
   );
@@ -48,6 +49,21 @@ export function ShiftTypeDialog({
     DefaultBreakStart: "13:00",
     DefaultBreakEnd: "14:00",
   });
+
+  const loadShiftTypes = async () => {
+    try {
+      const types = await getShiftTypes();
+      setShiftTypes(types);
+    } catch (error) {
+      console.error("Ошибка загрузки типов смен:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (open) {
+      loadShiftTypes();
+    }
+  }, [open]);
 
   const handleTypeSelect = (type: ShiftTypeDefinition) => {
     setSelectedType(type);
@@ -65,7 +81,7 @@ export function ShiftTypeDialog({
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const dataToSave = { ...formData };
 
@@ -76,18 +92,28 @@ export function ShiftTypeDialog({
       dataToSave.DefaultBreakEnd = "00:00";
     }
 
-    if (selectedType) {
-      onUpdate(selectedType.ID, dataToSave);
-    } else {
-      onSave(dataToSave);
+    try {
+      if (selectedType) {
+        await updateShiftType(selectedType.ID, dataToSave);
+      } else {
+        await createShiftType(dataToSave);
+      }
+      resetForm();
+      loadShiftTypes();
+    } catch (error) {
+      console.error("Ошибка при сохранении типа смены:", error);
     }
-    resetForm();
   };
 
-  const handleDelete = (type: ShiftTypeDefinition) => {
-    onDelete(type.ID);
-    if (selectedType?.ID === type.ID) {
-      resetForm();
+  const handleDelete = async (type: ShiftTypeDefinition) => {
+    try {
+      await deleteShiftType(type.ID);
+      if (selectedType?.ID === type.ID) {
+        resetForm();
+      }
+      loadShiftTypes();
+    } catch (error) {
+      console.error("Ошибка при удалении типа смены:", error);
     }
   };
 
@@ -123,7 +149,7 @@ export function ShiftTypeDialog({
             Выберите тип и введите время
           </DialogContentText>
           <Box sx={{ display: "flex", gap: 4 }}>
-            {/* Left Column: List of Existing Shift Types */}
+            {/* Левый столбец: список существующих типов смен */}
             <Box sx={{ width: 300, display: "flex", flexDirection: "column" }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
                 Существующие типы смен
@@ -166,7 +192,10 @@ export function ShiftTypeDialog({
                           alignItems: "center",
                         }}
                       >
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                        <Typography
+                          variant="subtitle2"
+                          sx={{ fontWeight: 600 }}
+                        >
                           {type.Name}
                         </Typography>
                         <Box sx={{ display: "flex", gap: 1 }}>
@@ -210,12 +239,11 @@ export function ShiftTypeDialog({
               </Box>
             </Box>
 
-            {/* Vertical Divider */}
+            {/* Вертикальный разделитель */}
             <Divider orientation="vertical" flexItem />
 
-            {/* Right Column: Form */}
+            {/* Правый столбец: форма */}
             <Box component="form" onSubmit={handleSubmit} sx={{ flex: 1 }}>
-              {/* Название */}
               <TextField
                 fullWidth
                 required
@@ -228,7 +256,6 @@ export function ShiftTypeDialog({
                 sx={{ mb: 2 }}
               />
 
-              {/* Цвета: фон и текст */}
               <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
                 <TextField
                   label="Цвет фона"
@@ -256,7 +283,6 @@ export function ShiftTypeDialog({
                 />
               </Box>
 
-              {/* Переключатель: Требовать время начала/окончания */}
               <FormControlLabel
                 control={
                   <Switch
@@ -274,7 +300,6 @@ export function ShiftTypeDialog({
                 sx={{ mb: 2 }}
               />
 
-              {/* Временные поля */}
               {formData.RequiredStartEndTime && (
                 <>
                   <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
@@ -344,7 +369,6 @@ export function ShiftTypeDialog({
                 </>
               )}
 
-              {/* Переключатель: Влияет на норму рабочего времени */}
               <FormControlLabel
                 control={
                   <Switch
@@ -362,7 +386,6 @@ export function ShiftTypeDialog({
                 sx={{ mb: 2 }}
               />
 
-              {/* Описание */}
               <TextField
                 fullWidth
                 id="description"
