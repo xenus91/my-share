@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+// ShiftTypeDialog.tsx
+import React, { useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -16,12 +17,6 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { ShiftTypeDefinition } from "../types";
-import {
-  createShiftType,
-  updateShiftType,
-  deleteShiftType,
-  getShiftTypes,
-} from "../services/shiftTypeService";
 
 interface ShiftTypeDialogProps {
   shiftTypes: ShiftTypeDefinition[];
@@ -31,12 +26,15 @@ interface ShiftTypeDialogProps {
   trigger: React.ReactNode;
 }
 
-export function ShiftTypeDialog({ trigger }: ShiftTypeDialogProps) {
+export function ShiftTypeDialog({
+  shiftTypes,
+  onSave,
+  onUpdate,
+  onDelete,
+  trigger,
+}: ShiftTypeDialogProps) {
   const [open, setOpen] = useState(false);
-  const [shiftTypes, setShiftTypes] = useState<ShiftTypeDefinition[]>([]);
-  const [selectedType, setSelectedType] = useState<ShiftTypeDefinition | null>(
-    null
-  );
+  const [selectedType, setSelectedType] = useState<ShiftTypeDefinition | null>(null);
   const [formData, setFormData] = useState({
     Name: "",
     BackgroundColor: "#E5EDFF",
@@ -49,21 +47,6 @@ export function ShiftTypeDialog({ trigger }: ShiftTypeDialogProps) {
     DefaultBreakStart: "13:00",
     DefaultBreakEnd: "14:00",
   });
-
-  const loadShiftTypes = async () => {
-    try {
-      const types = await getShiftTypes();
-      setShiftTypes(types);
-    } catch (error) {
-      console.error("Ошибка загрузки типов смен:", error);
-    }
-  };
-
-  useEffect(() => {
-    if (open) {
-      loadShiftTypes();
-    }
-  }, [open]);
 
   const handleTypeSelect = (type: ShiftTypeDefinition) => {
     setSelectedType(type);
@@ -94,12 +77,11 @@ export function ShiftTypeDialog({ trigger }: ShiftTypeDialogProps) {
 
     try {
       if (selectedType) {
-        await updateShiftType(selectedType.ID, dataToSave);
+        await onUpdate(selectedType.ID, dataToSave);
       } else {
-        await createShiftType(dataToSave);
+        await onSave(dataToSave);
       }
       resetForm();
-      loadShiftTypes();
     } catch (error) {
       console.error("Ошибка при сохранении типа смены:", error);
     }
@@ -107,11 +89,10 @@ export function ShiftTypeDialog({ trigger }: ShiftTypeDialogProps) {
 
   const handleDelete = async (type: ShiftTypeDefinition) => {
     try {
-      await deleteShiftType(type.ID);
+      await onDelete(type.ID);
       if (selectedType?.ID === type.ID) {
         resetForm();
       }
-      loadShiftTypes();
     } catch (error) {
       console.error("Ошибка при удалении типа смены:", error);
     }
@@ -174,13 +155,9 @@ export function ShiftTypeDialog({ trigger }: ShiftTypeDialogProps) {
                         p: 2,
                         borderRadius: 1,
                         cursor: "pointer",
-                        backgroundColor: isSelected
-                          ? "secondary.main"
-                          : "transparent",
+                        backgroundColor: isSelected ? "secondary.main" : "transparent",
                         "&:hover": {
-                          backgroundColor: isSelected
-                            ? "secondary.main"
-                            : "secondary.light",
+                          backgroundColor: isSelected ? "secondary.main" : "secondary.light",
                         },
                         mb: 1,
                       }}
@@ -192,10 +169,7 @@ export function ShiftTypeDialog({ trigger }: ShiftTypeDialogProps) {
                           alignItems: "center",
                         }}
                       >
-                        <Typography
-                          variant="subtitle2"
-                          sx={{ fontWeight: 600 }}
-                        >
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                           {type.Name}
                         </Typography>
                         <Box sx={{ display: "flex", gap: 1 }}>
