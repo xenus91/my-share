@@ -54,7 +54,8 @@ import AssignShiftPatternForm from './AssignShiftPatternForm';
 import { ShiftCellRenderer } from './ShiftCellRenderer';
 import { EmployeeDialog } from './EmployeeDialog';
 import { ShiftTypeDialog } from './ShiftTypeDialog';
-import { getEmployee } from "../services/userService";
+import { getEmployee} from "../services/userService";
+import { getShiftTypes } from "../services/shiftTypeService"; 
 
 type ViewPeriod = 'week' | 'month' | 'year';
 
@@ -141,6 +142,20 @@ useEffect(() => {
       DefaultBreakEnd: '00:00',
     },*/
   ]);
+
+  // Загрузка типов смен
+  useEffect(() => {
+    async function loadShiftTypes() {
+      try {
+        const types = await getShiftTypes();
+        console.log("✅ Получены типы смен:", types);
+        setShiftTypes(types);
+      } catch (error) {
+        console.error("❌ Ошибка загрузки типов смен:", error);
+      }
+    }
+    loadShiftTypes();
+  }, []);
 
   // Список сотрудников. ID — число
   const [timeData, setTimeData] = useState<TimeSheetEntry[]>([
