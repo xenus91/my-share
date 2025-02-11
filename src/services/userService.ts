@@ -182,6 +182,28 @@ export async function updateEmployee(
       );
     }
   }
+
+  export async function deleteEmployee(spItemId: number): Promise<void> {
+    try {
+      const digest = await getRequestDigest();
+      await apiClient.post(
+        `/web/lists/GetByTitle('Employees')/items(${spItemId})/recycle()`,
+        {},
+        {
+          headers: {
+            Accept: "application/json;odata=verbose",
+            "X-Requested-With": "XMLHttpRequest",
+            "X-RequestDigest": digest,
+          },
+        }
+      );
+      console.log("✅ Сотрудник отправлен в корзину.");
+    } catch (error: any) {
+      console.error("❌ Ошибка удаления сотрудника:", error);
+      throw error;
+    }
+  }
+  
   
   
   

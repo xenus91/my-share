@@ -55,8 +55,8 @@ import AssignShiftPatternForm from './AssignShiftPatternForm';
 import { ShiftCellRenderer } from './ShiftCellRenderer';
 import { EmployeeDialog } from './EmployeeDialog';
 import { ShiftTypeDialog } from './ShiftTypeDialog';
-import { getEmployee} from "../services/userService";
-import { getShiftTypes } from "../services/shiftTypeService"; 
+import { getEmployee, deleteEmployee } from "../services/userService";
+import { createShiftType, deleteShiftType, getShiftTypes, updateShiftType } from "../services/shiftTypeService"; 
 
 type ViewPeriod = 'week' | 'month' | 'year';
 
@@ -321,38 +321,67 @@ useEffect(() => {
     );
   };
 
-  const handleDeleteEmployee = (ID: number) => {
-    setTimeData((prev) => prev.filter((emp) => emp.ID !== ID));
+  const handleDeleteEmployee = async (ID: number) => {
+    try {
+      await deleteEmployee(ID);
+      setTimeData((prev) => prev.filter((emp) => emp.ID !== ID));
+      console.log("✅ Сотрудник успешно удалён.");
+    } catch (error) {
+      console.error("❌ Ошибка при удалении сотрудника:", error);
+    }
   };
+  
 
-  // ===========================
-  // ShiftType management
-  // ===========================
-  const handleAddShiftType = (shiftTypeData: Omit<ShiftTypeDefinition, 'ID'>) => {
+ // ===========================
+// ShiftType management
+// ===========================
+const handleAddShiftType = async (
+  shiftTypeData: Omit<ShiftTypeDefinition, 'ID'>
+): Promise<void> => {
+  try {
+    // Вызываем сервис создания типа смены, который возвращает новый ID из SharePoint
+    const newId = await createShiftType(shiftTypeData);
     const newShiftType: ShiftTypeDefinition = {
       ...shiftTypeData,
-      ID: Math.floor(Math.random() * 1000000) + 1,
+      ID: newId,
     };
     setShiftTypes((prev) => [...prev, newShiftType]);
-  };
+  } catch (error) {
+    console.error("Ошибка создания типа смены:", error);
+  }
+};
 
-  const handleUpdateShiftType = (ID: number, shiftTypeData: Omit<ShiftTypeDefinition, 'ID'>) => {
+const handleUpdateShiftType = async (
+  ID: number,
+  shiftTypeData: Omit<ShiftTypeDefinition, 'ID'>
+): Promise<void> => {
+  try {
+    await updateShiftType(ID, shiftTypeData);
     setShiftTypes((prev) =>
       prev.map((type) => (type.ID === ID ? { ...shiftTypeData, ID } : type))
     );
-  };
+  } catch (error) {
+    console.error("Ошибка обновления типа смены:", error);
+  }
+};
 
-  const handleDeleteShiftType = (ID: number) => {
-    // Проверяем, используется ли тип смены
-    const isInUse = timeData.some((employee) =>
-      Object.values(employee.shifts).flat().some((shift) => shift.ShiftTypeId === ID)
-    );
-    if (isInUse) {
-      alert('Нельзя удалить тип смены, который уже используется');
-      return;
-    }
+const handleDeleteShiftType = async (ID: number): Promise<void> => {
+  // Проверяем, используется ли тип смены
+  const isInUse = timeData.some((employee) =>
+    Object.values(employee.shifts).flat().some((shift) => shift.ShiftTypeId === ID)
+  );
+  if (isInUse) {
+    alert("Нельзя удалить тип смены, который уже используется");
+    return;
+  }
+  try {
+    await deleteShiftType(ID);
     setShiftTypes((prev) => prev.filter((type) => type.ID !== ID));
-  };
+  } catch (error) {
+    console.error("Ошибка удаления типа смены:", error);
+  }
+};
+
 
   // ===========================
   // Shifts management

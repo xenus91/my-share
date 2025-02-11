@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import TimeSheet from './components/TimeSheet';
-import { ensureEmployeesListExists, ensureWorkloadPeriodsListExists, ensureShiftTypeListExists } from './services/listCheck';
+import { ensureEmployeesListExists, ensureWorkloadPeriodsListExists, ensureShiftTypeListExists, ensureShiftsListExists } from './services/listCheck';
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,7 @@ function App() {
   const [status, setStatus] = useState<"loading" | "done" | "error">("loading");
 
   useEffect(() => {
-    Promise.all([ensureEmployeesListExists(), ensureWorkloadPeriodsListExists(), ensureShiftTypeListExists()])
+    Promise.all([ensureEmployeesListExists(), ensureWorkloadPeriodsListExists(), ensureShiftTypeListExists(), ensureShiftsListExists()])
       .then(() => {
         setStatus("done");
         setTimeout(() => setOpenDialog(false), 1500);

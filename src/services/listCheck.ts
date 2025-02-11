@@ -290,3 +290,133 @@ export async function ensureShiftTypeListExists(): Promise<void> {
     }
   }
 }
+
+
+export async function ensureShiftsListExists(): Promise<void> {
+  try {
+    // Проверяем существование списка "Shifts"
+    await apiClient.get("/web/lists/GetByTitle('Shifts')", {
+      headers: { Accept: "application/json;odata=verbose" },
+    });
+    console.log("✅ Список 'Shifts' найден");
+  } catch (error: any) {
+    if (error.response && error.response.status === 404) {
+      console.log("❌ Список 'Shifts' не найден. Создаем...");
+      try {
+        const digest = await getRequestDigest();
+        if (!digest) throw new Error("❌ Ошибка: X-RequestDigest не получен!");
+
+        // 1. Создаем список "Shifts"
+        const listPayload = {
+          __metadata: { type: "SP.List" },
+          Title: "Shifts",
+          BaseTemplate: 100,
+          Description: "Смены сотрудников",
+        };
+
+        const createListResponse = await apiClient.post("/web/lists", listPayload, {
+          headers: {
+            Accept: "application/json;odata=verbose",
+            "Content-Type": "application/json;odata=verbose",
+            "X-Requested-With": "XMLHttpRequest",
+            "X-RequestDigest": digest,
+          },
+        });
+        console.log("✅ Список 'Shifts' создан:", createListResponse.data);
+
+        // 2. Добавляем обычные поля
+        const fieldsUrl = `/web/lists/GetByTitle('Shifts')/fields`;
+        const fields = [
+          { Title: "Date", FieldTypeKind: 4 },         // DateTime
+          { Title: "StartTime", FieldTypeKind: 2 },      // Text
+          { Title: "EndTime", FieldTypeKind: 2 },        // Text
+          { Title: "BreakStart", FieldTypeKind: 2 },     // Text
+          { Title: "BreakEnd", FieldTypeKind: 2 },       // Text
+          { Title: "Hours", FieldTypeKind: 9 },          // Number
+          { Title: "IsNightShift", FieldTypeKind: 8 },   // Boolean
+        ];
+
+        for (const field of fields) {
+          await apiClient.post(
+            fieldsUrl,
+            {
+              __metadata: { type: "SP.Field" },
+              Title: field.Title,
+              FieldTypeKind: field.FieldTypeKind,
+            },
+            {
+              headers: {
+                Accept: "application/json;odata=verbose",
+                "Content-Type": "application/json;odata=verbose",
+                "X-Requested-With": "XMLHttpRequest",
+                "X-RequestDigest": digest,
+              },
+            }
+          );
+          console.log(`✅ Поле '${field.Title}' добавлено.`);
+        }
+
+        // 3. Добавляем Lookup-поле для сотрудника (Employee)
+        const employeesListGuid = await getListGUID("Employees");
+        const webGuid = await getWebGUID();
+
+        const employeeLookupPayload = {
+          parameters: {
+            __metadata: { type: "SP.FieldCreationInformation" },
+            Title: "Employee",
+            FieldTypeKind: 7, // Lookup
+            LookupListId: `{${employeesListGuid}}`,
+            LookupWebId: `{${webGuid}}`,
+            LookupFieldName: "Title",
+            Required: true,
+          },
+        };
+
+        const addEmployeeLookupEndpoint = `/web/lists/GetByTitle('Shifts')/fields/AddField`;
+        await apiClient.post(addEmployeeLookupEndpoint, employeeLookupPayload, {
+          headers: {
+            Accept: "application/json;odata=verbose",
+            "Content-Type": "application/json;odata=verbose",
+            "X-Requested-With": "XMLHttpRequest",
+            "X-RequestDigest": digest,
+          },
+        });
+        console.log("✅ Поле 'Employee' (Lookup) добавлено.");
+
+        // 4. Добавляем Lookup-поле для типа смены (ShiftType)
+        const shiftTypeListGuid = await getListGUID("ShiftType");
+
+        const shiftTypeLookupPayload = {
+          parameters: {
+            __metadata: { type: "SP.FieldCreationInformation" },
+            Title: "ShiftType",
+            FieldTypeKind: 7, // Lookup
+            LookupListId: `{${shiftTypeListGuid}}`,
+            LookupWebId: `{${webGuid}}`,
+            LookupFieldName: "Title",
+            Required: true,
+          },
+        };
+
+        const addShiftTypeLookupEndpoint = `/web/lists/GetByTitle('Shifts')/fields/AddField`;
+        await apiClient.post(addShiftTypeLookupEndpoint, shiftTypeLookupPayload, {
+          headers: {
+            Accept: "application/json;odata=verbose",
+            "Content-Type": "application/json;odata=verbose",
+            "X-Requested-With": "XMLHttpRequest",
+            "X-RequestDigest": digest,
+          },
+        });
+        console.log("✅ Поле 'ShiftType' (Lookup) добавлено.");
+
+        console.log("✅ Все поля для 'Shifts' добавлены.");
+      } catch (createError) {
+        console.error("❌ Ошибка создания списка 'Shifts':", createError);
+        throw createError;
+      }
+    } else {
+      console.error("❌ Ошибка проверки списка 'Shifts':", error);
+      throw error;
+    }
+  }
+}
