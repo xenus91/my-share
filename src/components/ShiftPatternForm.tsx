@@ -56,12 +56,12 @@ export default function ShiftPatternForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Если правило новое (ID === 0), генерируем временный отрицательный ID
-    const newID = pattern.ID !== 0 ? pattern.ID : -Math.floor(Math.random() * 1000000);
-    onSave({ ...pattern, ID: newID });
+    // Для нового правила (ID === 0) передаём просто 0, чтобы SharePoint сам сгенерировал ID
+    onSave({ ...pattern, ID: pattern.ID !== 0 ? pattern.ID : 0 });
     setPattern({ ID: 0, Name: '', Pattern: [false] });
     setSelectedPatternId(0);
   };
+  
 
   const handleDelete = () => {
     if (pattern.ID !== 0) {

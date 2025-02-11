@@ -7,125 +7,126 @@ import { getRequestDigest, getWebGUID, getListGUID  } from './contextService';
 
 // Проверка наличия списка "Employees" и его создание при необходимости
 export async function ensureEmployeesListExists(): Promise<void> {
+  let listExists = false;
   try {
-      await apiClient.get("/web/lists/GetByTitle('Employees')", {
-          headers: { Accept: 'application/json;odata=verbose' }
-      });
-      console.log("✅ Список 'Employees' найден");
+    await apiClient.get("/web/lists/GetByTitle('Employees')", {
+      headers: { Accept: "application/json;odata=verbose" }
+    });
+    console.log("✅ Список 'Employees' найден");
+    listExists = true;
   } catch (error: any) {
-      if (error.response && error.response.status === 404) {
-          console.log("❌ Список 'Employees' не найден. Создаем...");
+    if (error.response && error.response.status === 404) {
+      console.log("❌ Список 'Employees' не найден. Создаем...");
+      try {
+        const digest = await getRequestDigest();
+        if (!digest) throw new Error("❌ Ошибка: X-RequestDigest не получен!");
 
-          try {
-              const digest = await getRequestDigest();
-              if (!digest) {
-                  console.error("❌ Ошибка: X-RequestDigest не получен!");
-                  throw new Error("X-RequestDigest не получен");
-              }
-              console.log("🔹 X-RequestDigest:", digest);
+        const listPayload = {
+          __metadata: { type: "SP.List" },
+          Title: "Employees",
+          BaseTemplate: 100,
+          Description: "Список сотрудников"
+        };
 
-              const listPayload = {
-                  __metadata: { "type": "SP.List" },
-                  Title: "Employees",
-                  BaseTemplate: 100,
-                  Description: "Список сотрудников"
-              };
-
-              console.log("🔹 Отправляем запрос на создание списка...");
-              const createListResponse = await apiClient.post("/web/lists", listPayload, {
-                  headers: {
-                      Accept: 'application/json;odata=verbose',
-                      'Content-Type': 'application/json;odata=verbose',
-                      "X-Requested-With": "XMLHttpRequest",
-                      "X-RequestDigest": digest
-                  }
-              });
-
-              console.log("✅ Список 'Employees' создан:", createListResponse.data);
-
-              // Добавляем поля
-              const fieldsUrl = `/web/lists/GetByTitle('Employees')/fields`;
-              const fields = [
-                {
-                  __metadata: { type: "SP.FieldUser" },
-                  Title: "Employee",
-                  FieldTypeKind: 20, // 🔹 Поле типа "User"
-                  Required: false
-                },
-                {
-                  __metadata: { type: "SP.FieldText" },
-                  Title: "JobTitle",
-                  FieldTypeKind: 2, // 🔹 Текстовое поле (Single Line of Text)
-                  Required: false,
-                  MaxLength: 255
-                },
-                {
-                  __metadata: { type: "SP.FieldText" },
-                  Title: "Department",
-                  FieldTypeKind: 2, // 🔹 Текстовое поле (Single Line of Text)
-                  Required: false,
-                  MaxLength: 255
-                },
-                {
-                  __metadata: { type: "SP.FieldText" },
-                  Title: "Office",
-                  FieldTypeKind: 2, // 🔹 Текстовое поле (Single Line of Text)
-                  Required: false,
-                  MaxLength: 255
-                }
-              ];
-              
-
-              for (const field of fields) {
-                  console.log(`🔹 Добавляем поле '${field.Title}'...`);
-                  const fieldPayload = {
-                      __metadata: { "type": field.__metadata.type },
-                      Title: field.Title,
-                      FieldTypeKind: field.FieldTypeKind,
-                      Required: field.Required,
-                      ...(field.MaxLength ? { MaxLength: field.MaxLength } : {})
-                  };
-
-                  await apiClient.post(fieldsUrl, fieldPayload, {
-                      headers: {
-                          Accept: 'application/json;odata=verbose',
-                          'Content-Type': 'application/json;odata=verbose',
-                          "X-Requested-With": "XMLHttpRequest",
-                          "X-RequestDigest": digest
-                      }
-                  });
-
-                  console.log(`✅ Поле '${field.Title}' добавлено`);
-              }
-          } catch (createError) {
-              console.error("❌ Ошибка создания списка 'Employees' или полей:", createError);
-              throw createError;
+        const createListResponse = await apiClient.post("/web/lists", listPayload, {
+          headers: {
+            Accept: "application/json;odata=verbose",
+            "Content-Type": "application/json;odata=verbose",
+            "X-Requested-With": "XMLHttpRequest",
+            "X-RequestDigest": digest
           }
-      } else {
-          console.error("❌ Ошибка проверки списка 'Employees':", error);
-          throw error;
+        });
+        console.log("✅ Список 'Employees' создан:", createListResponse.data);
+        listExists = true;
+      } catch (createError) {
+        console.error("❌ Ошибка создания списка 'Employees':", createError);
+        throw createError;
       }
+    } else {
+      console.error("❌ Ошибка проверки списка 'Employees':", error);
+      throw error;
+    }
+  }
+
+  if (listExists) {
+    try {
+      const fieldsResponse = await apiClient.get("/web/lists/GetByTitle('Employees')/fields", {
+        headers: { Accept: "application/json;odata=verbose" }
+      });
+      const existingFields: string[] = fieldsResponse.data.d.results.map((f: any) => f.Title);
+
+      // Поля, которые должны присутствовать в списке "Employees"
+      const requiredFields: { Title: string; FieldTypeKind: number; __metadata: { type: string } }[] = [
+        {
+          Title: "Employee",
+          FieldTypeKind: 20, // Тип "User"
+          __metadata: { type: "SP.FieldUser" }
+        },
+        {
+          Title: "JobTitle",
+          FieldTypeKind: 2,
+          __metadata: { type: "SP.FieldText" }
+        },
+        {
+          Title: "Department",
+          FieldTypeKind: 2,
+          __metadata: { type: "SP.FieldText" }
+        },
+        {
+          Title: "Office",
+          FieldTypeKind: 2,
+          __metadata: { type: "SP.FieldText" }
+        }
+      ];
+
+      const digest = await getRequestDigest();
+      const fieldsUrl = `/web/lists/GetByTitle('Employees')/fields`;
+      for (const field of requiredFields) {
+        if (!existingFields.includes(field.Title)) {
+          const fieldPayload = {
+            __metadata: { type: field.__metadata.type },
+            Title: field.Title,
+            FieldTypeKind: field.FieldTypeKind,
+            Required: false,
+            ...(field.FieldTypeKind === 2 ? { MaxLength: 255 } : {})
+          };
+
+          await apiClient.post(fieldsUrl, fieldPayload, {
+            headers: {
+              Accept: "application/json;odata=verbose",
+              "Content-Type": "application/json;odata=verbose",
+              "X-Requested-With": "XMLHttpRequest",
+              "X-RequestDigest": digest
+            }
+          });
+          console.log(`✅ Поле '${field.Title}' добавлено.`);
+        }
+      }
+
+      console.log("✅ Все поля для 'Employees' проверены и добавлены, если отсутствовали.");
+    } catch (fieldsError) {
+      console.error("❌ Ошибка проверки/добавления полей для 'Employees':", fieldsError);
+      throw fieldsError;
+    }
   }
 }
 
 
 export async function ensureWorkloadPeriodsListExists(): Promise<void> {
+  let listExists = false;
   try {
-    // Проверяем существование списка
     await apiClient.get("/web/lists/GetByTitle('WorkloadPeriods')", {
-      headers: { Accept: 'application/json;odata=verbose' }
+      headers: { Accept: "application/json;odata=verbose" }
     });
     console.log("✅ Список 'WorkloadPeriods' найден");
+    listExists = true;
   } catch (error: any) {
-    // Если 404, значит список не существует — создаём
     if (error.response && error.response.status === 404) {
       console.log("❌ Список 'WorkloadPeriods' не найден. Создаем...");
-
       try {
         const digest = await getRequestDigest();
         if (!digest) throw new Error("❌ Ошибка: X-RequestDigest не получен!");
 
-        // 1. Создаем сам список
         const listPayload = {
           __metadata: { type: "SP.List" },
           Title: "WorkloadPeriods",
@@ -142,16 +143,34 @@ export async function ensureWorkloadPeriodsListExists(): Promise<void> {
           }
         });
         console.log("✅ Список 'WorkloadPeriods' создан:", createListResponse.data);
+        listExists = true;
+      } catch (createError) {
+        console.error("❌ Ошибка создания списка 'WorkloadPeriods':", createError);
+        throw createError;
+      }
+    } else {
+      console.error("❌ Ошибка проверки списка 'WorkloadPeriods':", error);
+      throw error;
+    }
+  }
 
-        // 2. Добавляем обычные поля
-        const fieldsUrl = `/web/lists/GetByTitle('WorkloadPeriods')/fields`;
-        const fields = [
-          { Title: "StartDate", FieldTypeKind: 4 }, // DateTime
-          { Title: "EndDate", FieldTypeKind: 4 },   // DateTime
-          { Title: "Fraction", FieldTypeKind: 9 }   // Number
-        ];
+  if (listExists) {
+    try {
+      const fieldsResponse = await apiClient.get("/web/lists/GetByTitle('WorkloadPeriods')/fields", {
+        headers: { Accept: "application/json;odata=verbose" }
+      });
+      const existingFields: string[] = fieldsResponse.data.d.results.map((f: any) => f.Title);
 
-        for (const field of fields) {
+      const requiredFields: { Title: string; FieldTypeKind: number }[] = [
+        { Title: "StartDate", FieldTypeKind: 4 },
+        { Title: "EndDate", FieldTypeKind: 4 },
+        { Title: "Fraction", FieldTypeKind: 9 }
+      ];
+
+      const digest = await getRequestDigest();
+      const fieldsUrl = `/web/lists/GetByTitle('WorkloadPeriods')/fields`;
+      for (const field of requiredFields) {
+        if (!existingFields.includes(field.Title)) {
           await apiClient.post(
             fieldsUrl,
             {
@@ -170,24 +189,25 @@ export async function ensureWorkloadPeriodsListExists(): Promise<void> {
           );
           console.log(`✅ Поле '${field.Title}' добавлено.`);
         }
-
-        // 3. Добавляем Lookup-поле через AddField
+      }
+  
+      // Добавляем Lookup-поле "Employee", если отсутствует
+      if (!existingFields.includes("Employee")) {
         const employeesListGuid = await getListGUID("Employees");
         const webGuid = await getWebGUID();
 
-        // Формируем тело запроса для AddField
         const lookupFieldPayload = {
-            parameters: {
-              __metadata: { type: "SP.FieldCreationInformation" },
-              Title: "Employee",
-              FieldTypeKind: 7,
-              LookupListId: `{${employeesListGuid}}`,
-              LookupWebId: `{${webGuid}}`,
-              LookupFieldName: "Title",
-              Required: true // допустимое свойство
-            }
-          };
-        // POST на /AddField
+          parameters: {
+            __metadata: { type: "SP.FieldCreationInformation" },
+            Title: "Employee",
+            FieldTypeKind: 7,
+            LookupListId: `{${employeesListGuid}}`,
+            LookupWebId: `{${webGuid}}`,
+            LookupFieldName: "Title",
+            Required: true,
+          },
+        };
+
         const addFieldEndpoint = `/web/lists/GetByTitle('WorkloadPeriods')/fields/AddField`;
         await apiClient.post(addFieldEndpoint, lookupFieldPayload, {
           headers: {
@@ -195,45 +215,44 @@ export async function ensureWorkloadPeriodsListExists(): Promise<void> {
             "Content-Type": "application/json;odata=verbose",
             "X-Requested-With": "XMLHttpRequest",
             "X-RequestDigest": digest
-          }
+          },
         });
         console.log("✅ Поле 'Employee' (Lookup) добавлено.");
-      } catch (createError) {
-        console.error("❌ Ошибка создания списка 'WorkloadPeriods':", createError);
-        throw createError;
       }
-    } else {
-      console.error("❌ Ошибка проверки списка 'WorkloadPeriods':", error);
-      throw error;
+  
+      console.log("✅ Все поля для 'WorkloadPeriods' проверены и добавлены, если отсутствовали.");
+    } catch (fieldsError) {
+      console.error("❌ Ошибка проверки/добавления полей для 'WorkloadPeriods':", fieldsError);
+      throw fieldsError;
     }
   }
 }
 
 
 export async function ensureShiftTypeListExists(): Promise<void> {
+  let listExists = false;
   try {
-    // Проверяем существование списка
+    // Проверяем существование списка "ShiftType"
     await apiClient.get("/web/lists/GetByTitle('ShiftType')", {
       headers: { Accept: "application/json;odata=verbose" },
     });
     console.log("✅ Список 'ShiftType' найден");
+    listExists = true;
   } catch (error: any) {
-    // Если 404, значит список не существует — создаём
     if (error.response && error.response.status === 404) {
       console.log("❌ Список 'ShiftType' не найден. Создаем...");
-
       try {
         const digest = await getRequestDigest();
         if (!digest) throw new Error("❌ Ошибка: X-RequestDigest не получен!");
-
-        // 1. Создаем сам список
+  
+        // 1. Создаем сам список "ShiftType"
         const listPayload = {
           __metadata: { type: "SP.List" },
           Title: "ShiftType",
           BaseTemplate: 100,
           Description: "Типы смен сотрудников",
         };
-
+  
         const createListResponse = await apiClient.post("/web/lists", listPayload, {
           headers: {
             Accept: "application/json;odata=verbose",
@@ -243,23 +262,44 @@ export async function ensureShiftTypeListExists(): Promise<void> {
           },
         });
         console.log("✅ Список 'ShiftType' создан:", createListResponse.data);
-
-        // 2. Добавляем обычные поля
-        const fieldsUrl = `/web/lists/GetByTitle('ShiftType')/fields`;
-        const fields = [
-          { Title: "Name", FieldTypeKind: 2 }, // Text
-          { Title: "BackgroundColor", FieldTypeKind: 2 }, // Text
-          { Title: "TextColor", FieldTypeKind: 2 }, // Text
-          { Title: "AffectsWorkingNorm", FieldTypeKind: 8 }, // Boolean
-          { Title: "RequiredStartEndTime", FieldTypeKind: 8 }, // Boolean
-          { Title: "Description", FieldTypeKind: 2 }, // Text
-          { Title: "DefaultStartTime", FieldTypeKind: 2 }, // Text
-          { Title: "DefaultEndTime", FieldTypeKind: 2 }, // Text
-          { Title: "DefaultBreakStart", FieldTypeKind: 2 }, // Text
-          { Title: "DefaultBreakEnd", FieldTypeKind: 2 }, // Text
-        ];
-
-        for (const field of fields) {
+        listExists = true;
+      } catch (createError) {
+        console.error("❌ Ошибка создания списка 'ShiftType':", createError);
+        throw createError;
+      }
+    } else {
+      console.error("❌ Ошибка проверки списка 'ShiftType':", error);
+      throw error;
+    }
+  }
+  
+  // Если список существует, проверяем наличие необходимых полей и добавляем недостающие.
+  if (listExists) {
+    try {
+      // Получаем существующие поля списка "ShiftType"
+      const fieldsResponse = await apiClient.get("/web/lists/GetByTitle('ShiftType')/fields", {
+        headers: { Accept: "application/json;odata=verbose" },
+      });
+      const existingFields: string[] = fieldsResponse.data.d.results.map((f: any) => f.Title);
+  
+      // Определяем требуемые поля и их типы
+      const requiredFields: { Title: string; FieldTypeKind: number }[] = [
+        { Title: "Name", FieldTypeKind: 2 },             // Текстовое поле
+        { Title: "BackgroundColor", FieldTypeKind: 2 },    // Текстовое поле
+        { Title: "TextColor", FieldTypeKind: 2 },          // Текстовое поле
+        { Title: "AffectsWorkingNorm", FieldTypeKind: 8 },   // Булево поле
+        { Title: "RequiredStartEndTime", FieldTypeKind: 8 }, // Булево поле
+        { Title: "Description", FieldTypeKind: 2 },          // Текстовое поле
+        { Title: "DefaultStartTime", FieldTypeKind: 2 },     // Текстовое поле
+        { Title: "DefaultEndTime", FieldTypeKind: 2 },       // Текстовое поле
+        { Title: "DefaultBreakStart", FieldTypeKind: 2 },    // Текстовое поле
+        { Title: "DefaultBreakEnd", FieldTypeKind: 2 },      // Текстовое поле
+      ];
+  
+      const digest = await getRequestDigest();
+      const fieldsUrl = `/web/lists/GetByTitle('ShiftType')/fields`;
+      for (const field of requiredFields) {
+        if (!existingFields.includes(field.Title)) {
           await apiClient.post(
             fieldsUrl,
             {
@@ -278,27 +318,25 @@ export async function ensureShiftTypeListExists(): Promise<void> {
           );
           console.log(`✅ Поле '${field.Title}' добавлено.`);
         }
-
-        console.log("✅ Все поля для 'ShiftType' добавлены.");
-      } catch (createError) {
-        console.error("❌ Ошибка создания списка 'ShiftType':", createError);
-        throw createError;
       }
-    } else {
-      console.error("❌ Ошибка проверки списка 'ShiftType':", error);
-      throw error;
+      console.log("✅ Все поля для 'ShiftType' проверены и добавлены, если отсутствовали.");
+    } catch (fieldsError) {
+      console.error("❌ Ошибка проверки/добавления полей для 'ShiftType':", fieldsError);
+      throw fieldsError;
     }
   }
 }
 
 
 export async function ensureShiftsListExists(): Promise<void> {
+  let listExists = false;
   try {
     // Проверяем существование списка "Shifts"
     await apiClient.get("/web/lists/GetByTitle('Shifts')", {
       headers: { Accept: "application/json;odata=verbose" },
     });
     console.log("✅ Список 'Shifts' найден");
+    listExists = true;
   } catch (error: any) {
     if (error.response && error.response.status === 404) {
       console.log("❌ Список 'Shifts' не найден. Создаем...");
@@ -314,29 +352,58 @@ export async function ensureShiftsListExists(): Promise<void> {
           Description: "Смены сотрудников",
         };
 
-        const createListResponse = await apiClient.post("/web/lists", listPayload, {
-          headers: {
-            Accept: "application/json;odata=verbose",
-            "Content-Type": "application/json;odata=verbose",
-            "X-Requested-With": "XMLHttpRequest",
-            "X-RequestDigest": digest,
-          },
-        });
+        const createListResponse = await apiClient.post(
+          "/web/lists",
+          listPayload,
+          {
+            headers: {
+              Accept: "application/json;odata=verbose",
+              "Content-Type": "application/json;odata=verbose",
+              "X-Requested-With": "XMLHttpRequest",
+              "X-RequestDigest": digest,
+            },
+          }
+        );
         console.log("✅ Список 'Shifts' создан:", createListResponse.data);
+        listExists = true;
+      } catch (createError) {
+        console.error("❌ Ошибка создания списка 'Shifts':", createError);
+        throw createError;
+      }
+    } else {
+      console.error("❌ Ошибка проверки списка 'Shifts':", error);
+      throw error;
+    }
+  }
 
-        // 2. Добавляем обычные поля
-        const fieldsUrl = `/web/lists/GetByTitle('Shifts')/fields`;
-        const fields = [
-          { Title: "Date", FieldTypeKind: 4 },         // DateTime
-          { Title: "StartTime", FieldTypeKind: 2 },      // Text
-          { Title: "EndTime", FieldTypeKind: 2 },        // Text
-          { Title: "BreakStart", FieldTypeKind: 2 },     // Text
-          { Title: "BreakEnd", FieldTypeKind: 2 },       // Text
-          { Title: "Hours", FieldTypeKind: 9 },          // Number
-          { Title: "IsNightShift", FieldTypeKind: 8 },   // Boolean
-        ];
+  // Если список существует (либо уже был, либо создан) – проверяем и добавляем поля
+  if (listExists) {
+    try {
+      // Получаем уже существующие поля
+      const fieldsResponse = await apiClient.get(
+        "/web/lists/GetByTitle('Shifts')/fields",
+        { headers: { Accept: "application/json;odata=verbose" } }
+      );
+      const existingFields: string[] = fieldsResponse.data.d.results.map(
+        (f: any) => f.Title
+      );
 
-        for (const field of fields) {
+      const digest = await getRequestDigest();
+
+      // 1. Общие поля
+      const commonFields = [
+        { Title: "Date", FieldTypeKind: 4 },         // DateTime
+        { Title: "StartTime", FieldTypeKind: 2 },      // Text
+        { Title: "EndTime", FieldTypeKind: 2 },        // Text
+        { Title: "BreakStart", FieldTypeKind: 2 },     // Text
+        { Title: "BreakEnd", FieldTypeKind: 2 },       // Text
+        { Title: "Hours", FieldTypeKind: 9 },          // Number
+        { Title: "IsNightShift", FieldTypeKind: 8 },   // Boolean
+      ];
+
+      const fieldsUrl = `/web/lists/GetByTitle('Shifts')/fields`;
+      for (const field of commonFields) {
+        if (!existingFields.includes(field.Title)) {
           await apiClient.post(
             fieldsUrl,
             {
@@ -355,8 +422,10 @@ export async function ensureShiftsListExists(): Promise<void> {
           );
           console.log(`✅ Поле '${field.Title}' добавлено.`);
         }
+      }
 
-        // 3. Добавляем Lookup-поле для сотрудника (Employee)
+      // 2. Lookup-поле для сотрудника (Employee)
+      if (!existingFields.includes("Employee")) {
         const employeesListGuid = await getListGUID("Employees");
         const webGuid = await getWebGUID();
 
@@ -373,18 +442,25 @@ export async function ensureShiftsListExists(): Promise<void> {
         };
 
         const addEmployeeLookupEndpoint = `/web/lists/GetByTitle('Shifts')/fields/AddField`;
-        await apiClient.post(addEmployeeLookupEndpoint, employeeLookupPayload, {
-          headers: {
-            Accept: "application/json;odata=verbose",
-            "Content-Type": "application/json;odata=verbose",
-            "X-Requested-With": "XMLHttpRequest",
-            "X-RequestDigest": digest,
-          },
-        });
+        await apiClient.post(
+          addEmployeeLookupEndpoint,
+          employeeLookupPayload,
+          {
+            headers: {
+              Accept: "application/json;odata=verbose",
+              "Content-Type": "application/json;odata=verbose",
+              "X-Requested-With": "XMLHttpRequest",
+              "X-RequestDigest": digest,
+            },
+          }
+        );
         console.log("✅ Поле 'Employee' (Lookup) добавлено.");
+      }
 
-        // 4. Добавляем Lookup-поле для типа смены (ShiftType)
+      // 3. Lookup-поле для типа смены (ShiftType)
+      if (!existingFields.includes("ShiftType")) {
         const shiftTypeListGuid = await getListGUID("ShiftType");
+        const webGuid = await getWebGUID();
 
         const shiftTypeLookupPayload = {
           parameters: {
@@ -399,24 +475,123 @@ export async function ensureShiftsListExists(): Promise<void> {
         };
 
         const addShiftTypeLookupEndpoint = `/web/lists/GetByTitle('Shifts')/fields/AddField`;
-        await apiClient.post(addShiftTypeLookupEndpoint, shiftTypeLookupPayload, {
-          headers: {
-            Accept: "application/json;odata=verbose",
-            "Content-Type": "application/json;odata=verbose",
-            "X-Requested-With": "XMLHttpRequest",
-            "X-RequestDigest": digest,
-          },
-        });
+        await apiClient.post(
+          addShiftTypeLookupEndpoint,
+          shiftTypeLookupPayload,
+          {
+            headers: {
+              Accept: "application/json;odata=verbose",
+              "Content-Type": "application/json;odata=verbose",
+              "X-Requested-With": "XMLHttpRequest",
+              "X-RequestDigest": digest,
+            },
+          }
+        );
         console.log("✅ Поле 'ShiftType' (Lookup) добавлено.");
+      }
 
-        console.log("✅ Все поля для 'Shifts' добавлены.");
+      console.log("✅ Все поля для 'Shifts' добавлены.");
+    } catch (fieldsError) {
+      console.error("❌ Ошибка проверки/добавления полей для 'Shifts':", fieldsError);
+      throw fieldsError;
+    }
+  }
+}
+
+export async function ensureShiftPatternListExists(): Promise<void> {
+  let listExists = false;
+  try {
+    // Проверяем существование списка "ShiftPattern"
+    await apiClient.get("/web/lists/GetByTitle('ShiftPattern')", {
+      headers: { Accept: "application/json;odata=verbose" },
+    });
+    console.log("✅ Список 'ShiftPattern' найден");
+    listExists = true;
+  } catch (error: any) {
+    if (error.response && error.response.status === 404) {
+      console.log("❌ Список 'ShiftPattern' не найден. Создаем...");
+      try {
+        const digest = await getRequestDigest();
+        if (!digest) throw new Error("❌ Ошибка: X-RequestDigest не получен!");
+
+        // 1. Создаем сам список "ShiftPattern"
+        const listPayload = {
+          __metadata: { type: "SP.List" },
+          Title: "ShiftPattern",
+          BaseTemplate: 100,
+          Description: "Паттерны чередования смен сотрудников",
+        };
+
+        const createListResponse = await apiClient.post(
+          "/web/lists",
+          listPayload,
+          {
+            headers: {
+              Accept: "application/json;odata=verbose",
+              "Content-Type": "application/json;odata=verbose",
+              "X-Requested-With": "XMLHttpRequest",
+              "X-RequestDigest": digest,
+            },
+          }
+        );
+        console.log("✅ Список 'ShiftPattern' создан:", createListResponse.data);
+        listExists = true;
       } catch (createError) {
-        console.error("❌ Ошибка создания списка 'Shifts':", createError);
+        console.error("❌ Ошибка создания списка 'ShiftPattern':", createError);
         throw createError;
       }
     } else {
-      console.error("❌ Ошибка проверки списка 'Shifts':", error);
+      console.error("❌ Ошибка проверки списка 'ShiftPattern':", error);
       throw error;
+    }
+  }
+
+  if (listExists) {
+    try {
+      // Получаем список существующих полей
+      const fieldsResponse = await apiClient.get(
+        "/web/lists/GetByTitle('ShiftPattern')/fields",
+        { headers: { Accept: "application/json;odata=verbose" } }
+      );
+      const existingFields: string[] = fieldsResponse.data.d.results.map(
+        (f: any) => f.Title
+      );
+
+      // Определяем необходимые поля для списка "ShiftPattern"
+      // Если требуется многострочное поле, для хранения JSON можно использовать FieldTypeKind: 3 (Note)
+      // Здесь оставляем FieldTypeKind: 2, как в примере, но при необходимости измените на 3.
+      const requiredFields: { Title: string; FieldTypeKind: number }[] = [
+        { Title: "Name", FieldTypeKind: 2 },
+        { Title: "Pattern", FieldTypeKind: 2 },
+      ];
+
+      const digest = await getRequestDigest();
+      const fieldsUrl = `/web/lists/GetByTitle('ShiftPattern')/fields`;
+      for (const field of requiredFields) {
+        if (!existingFields.includes(field.Title)) {
+          await apiClient.post(
+            fieldsUrl,
+            {
+              __metadata: { type: "SP.Field" },
+              Title: field.Title,
+              FieldTypeKind: field.FieldTypeKind,
+            },
+            {
+              headers: {
+                Accept: "application/json;odata=verbose",
+                "Content-Type": "application/json;odata=verbose",
+                "X-Requested-With": "XMLHttpRequest",
+                "X-RequestDigest": digest,
+              },
+            }
+          );
+          console.log(`✅ Поле '${field.Title}' добавлено.`);
+        }
+      }
+      console.log("✅ Все поля для 'ShiftPattern' проверены и добавлены, если отсутствовали.");
+    } catch (fieldsError) {
+      console.error("❌ Ошибка проверки/добавления полей для 'ShiftPattern':", fieldsError);
+      throw fieldsError;
     }
   }
 }
