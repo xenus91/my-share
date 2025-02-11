@@ -182,11 +182,10 @@ useEffect(() => {
   ]);
 
   useEffect(() => {
-    if (timeData.length === 0) return;
-  
     async function loadShifts() {
       try {
         const shifts = await getShifts();
+        console.log("Запрос getShifts выполнен", shifts);
         setTimeData((prevData) =>
           prevData.map((employee) => {
             const employeeShifts = shifts.filter(
@@ -194,7 +193,6 @@ useEffect(() => {
             );
             const shiftsByDate = employeeShifts.reduce(
               (acc, shift) => {
-                // Преобразуем дату смены в строку формата "yyyy-MM-dd"
                 const formattedDate = format(new Date(shift.Date), 'yyyy-MM-dd');
                 if (!acc[formattedDate]) {
                   acc[formattedDate] = [];
@@ -214,9 +212,9 @@ useEffect(() => {
         console.error("Ошибка загрузки смен:", error);
       }
     }
-  
+    
     loadShifts();
-  }, [timeData.length]);
+  }, []); // например, пустой массив зависимостей
   
 
  // ===========================
@@ -286,8 +284,9 @@ const handleDeletePattern = async (patternId: number): Promise<void> => {
         shiftType.DefaultStartTime,
         shiftType.DefaultEndTime,
         shiftType.DefaultBreakStart,
-        shiftType.DefaultBreakEnd
-      );
+        shiftType.DefaultBreakEnd,
+        shiftType.RequiredStartEndTime ?? true
+      );      
       handleAddShift(
         parseInt(employeeId, 10),
         date,
@@ -566,75 +565,82 @@ const handleDeleteShift = async (
   // AgGrid: row data
   // ===========================
   const rows = useMemo(() => {
-    return timeData
-      .filter((employee) => {
-        if (!activeFilter) return true;
-        const shifts = employee.shifts[activeFilter.date] || [];
-        // Смотрим ShiftTypeId
-        return shifts.some((shift) => shift.ShiftTypeId === activeFilter.shiftTypeId);
-      })
-      .map((employee) => {
-        const row: any = {
-          ID: employee.ID,
-          employeeId: employee.ID,
-          Title: employee.Title,
-          JobTitle: employee.JobTitle,
-          Department: employee.Department,
-          Office: employee.Office,
-          workloadPeriods: employee.workloadPeriods,
-          totalHours: days.reduce((sum: number, day: Date) => {
-            const dateStr = format(day, 'yyyy-MM-dd');
-            const shifts = employee.shifts[dateStr] || [];
-            // 'Hours' соответствует интерфейсу Shift
-            return sum + shifts.reduce((shiftSum: number, shift: Shift) => shiftSum + shift.Hours, 0);
-          }, 0),
-          holidayHours: days.reduce((sum: number, day: Date) => {
-            const dateStr = format(day, 'yyyy-MM-dd');
-            const shifts = employee.shifts[dateStr] || [];
-            return sum + shifts.reduce((shiftSum: number, shift: Shift) => {
-              return shiftSum + calculateHolidayHours(shift);
-            }, 0);
-          }, 0),
-          normHours: days.reduce((sum: number, day: Date) => {
-            let dayNorm = getDayNorm(day);
-            const dateStr = format(day, 'yyyy-MM-dd');
-            const shifts = employee.shifts[dateStr] || [];
-            const hasAffectingShift = shifts.some((shift) => {
-              const shiftType = shiftTypes.find((type) => type.ID === shift.ShiftTypeId);
-              // 'AffectsWorkingNorm' в интерфейсе ShiftTypeDefinition
-              return shiftType?.AffectsWorkingNorm;
-            });
-            if (hasAffectingShift) return sum;
-            let fraction = 1;
-            const workloadPeriods = employee.workloadPeriods ?? [];
-            // Проверяем, попадает ли дата в период
-            for (const period of workloadPeriods) {
-              if (
-                (!period.StartDate || period.StartDate <= dateStr) &&
-                (!period.EndDate || period.EndDate >= dateStr)
-              ) {
-                fraction = period.Fraction;
-              }
+    return timeData.map((employee) => {
+      const totalHours = days.reduce((sum: number, day: Date) => {
+        const dateStr = format(day, 'yyyy-MM-dd');
+        const shifts = employee.shifts[dateStr] || [];
+        return sum + shifts.reduce((s: number, shift: Shift) => {
+          const shiftType = shiftTypes.find(t => t.ID === shift.ShiftTypeId);
+          // Если CivilLawContract === false, добавляем часы
+          return shiftType && !shiftType.CivilLawContract ? s + shift.Hours : s;
+        }, 0);
+      }, 0);
+      const totalHoursCLW = days.reduce((sum: number, day: Date) => {
+        const dateStr = format(day, 'yyyy-MM-dd');
+        const shifts = employee.shifts[dateStr] || [];
+        return sum + shifts.reduce((s: number, shift: Shift) => {
+          // Приводим shift.ShiftTypeId к числу, если это необходимо
+          const shiftType = shiftTypes.find(t => t.ID === Number(shift.ShiftTypeId));
+          // Если поле CivilLawContract отсутствует или равно null, интерпретируем как false
+          const isCLW = shiftType?.CivilLawContract ?? false;
+          return isCLW ? s + shift.Hours : s;
+        }, 0);
+      }, 0);
+      
+  
+      const row: any = {
+        ID: employee.ID,
+        employeeId: employee.ID,
+        Title: employee.Title,
+        JobTitle: employee.JobTitle,
+        Department: employee.Department,
+        Office: employee.Office,
+        workloadPeriods: employee.workloadPeriods,
+        totalHours,      // Лента (CivilLawContract === false)
+        totalHoursCLW: totalHoursCLW, // ГПХ (CivilLawContract === true)
+        holidayHours: days.reduce((sum: number, day: Date) => {
+          const dateStr = format(day, 'yyyy-MM-dd');
+          const shifts = employee.shifts[dateStr] || [];
+          return sum + shifts.reduce((s: number, shift: Shift) => s + calculateHolidayHours(shift), 0);
+        }, 0),
+        normHours: days.reduce((sum: number, day: Date) => {
+          let dayNorm = getDayNorm(day);
+          const dateStr = format(day, 'yyyy-MM-dd');
+          const shifts = employee.shifts[dateStr] || [];
+          const hasAffectingShift = shifts.some((shift) => {
+            const shiftType = shiftTypes.find((type) => type.ID === shift.ShiftTypeId);
+            return shiftType?.AffectsWorkingNorm;
+          });
+          if (hasAffectingShift) return sum;
+          let fraction = 1;
+          const workloadPeriods = employee.workloadPeriods ?? [];
+          for (const period of workloadPeriods) {
+            if (
+              (!period.StartDate || period.StartDate <= dateStr) &&
+              (!period.EndDate || period.EndDate >= dateStr)
+            ) {
+              fraction = period.Fraction;
             }
-            dayNorm *= fraction;
-            return sum + dayNorm;
-          }, 0),
+          }
+          dayNorm *= fraction;
+          return sum + dayNorm;
+        }, 0),
+      };
+  
+      days.forEach((day) => {
+        const formattedDate = format(day, 'yyyy-MM-dd');
+        const shifts = employee.shifts[formattedDate] || [];
+        row[`day-${formattedDate}`] = {
+          employeeId: employee.ID,
+          date: formattedDate,
+          shifts,
         };
-
-        // Динамические поля для каждого дня
-        days.forEach((day) => {
-          const formattedDate = format(day, 'yyyy-MM-dd');
-          const shifts = employee.shifts[formattedDate] || [];
-          row[`day-${formattedDate}`] = {
-            employeeId: employee.ID,
-            date: formattedDate,
-            shifts,
-          };
-        });
-
-        return row;
       });
+  
+      return row;
+    });
   }, [timeData, days, shiftTypes, activeFilter]);
+  
 
   // ===========================
   // AgGrid: column defs
@@ -650,14 +656,23 @@ const handleDeleteShift = async (
       suppressMovable: true,
     },
     {
-      headerName: 'Всего часов',
-      field: 'totalHours',
-      width: 120,
-      pinned: 'left',
+      headerComponent: () => (
+        <div style={{ textAlign: "right", fontWeight: "bold", lineHeight: 1.2 }}>
+          <div>Всего часов</div>
+          <div style={{ fontSize: "0.8rem" }}>ЛЕНТА | ГПХ</div>
+        </div>
+      ),
+      field: "totalHours",
+      width: 150,
+      pinned: "left",
       sortable: false,
       suppressMovable: true,
-      cellStyle: { textAlign: 'right', fontWeight: 'bold' },
-      valueFormatter: (params: ValueFormatterParams) => `${params.value}ч`,
+      cellStyle: { textAlign: "right", fontWeight: "bold" },
+      valueGetter: (params: any) => {
+        const totalHours = params.data.totalHours;
+        const totalHoursCLW = params.data.totalHoursCLW;
+        return `${totalHours}ч | ${totalHoursCLW}ч`;
+      },
     },
     {
       headerName: 'Праздничные часы',

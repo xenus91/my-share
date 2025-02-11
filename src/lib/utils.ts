@@ -142,9 +142,15 @@ export function calculateShiftHours(
   startTime: string,
   endTime: string,
   breakStart: string,
-  breakEnd: string
+  breakEnd: string,
+  requiredStartEndTime: boolean // новый параметр
 ): number {
-  const baseDate = '2000-01-01'; // Базовая дата для расчётов
+  // Если время начала/окончания не требуются, возвращаем 0
+  if (!requiredStartEndTime) {
+    return 0;
+  }
+
+  const baseDate = '2000-01-01'; // базовая дата для расчетов
 
   let start = parse(`${baseDate} ${startTime}`, 'yyyy-MM-dd HH:mm', new Date());
   let end = parse(`${baseDate} ${endTime}`, 'yyyy-MM-dd HH:mm', new Date());
@@ -165,12 +171,10 @@ export function calculateShiftHours(
   }
 
   let breakMinutes = differenceInMinutes(breakEndTime, breakStartTime);
-
-  // Убедимся, что перерыв не превышает общую длительность смены
+  // Убедимся, что перерыв не превышает длительность смены
   const shiftDuration = differenceInMinutes(end, start);
   breakMinutes = Math.min(breakMinutes, shiftDuration);
 
   const workMinutes = totalMinutes - breakMinutes;
-
-  return parseFloat((workMinutes / 60).toFixed(2)); // Возвращаем часы с точностью до двух знаков
+  return parseFloat((workMinutes / 60).toFixed(2));
 }

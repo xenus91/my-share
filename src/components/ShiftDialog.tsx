@@ -1,4 +1,3 @@
-//ShiftDialog.tsx
 import React, { useState } from "react";
 import {
   Dialog,
@@ -20,7 +19,7 @@ import { calculateShiftHours } from "../lib/utils";
 interface ShiftDialogProps {
   shift?: Shift;
   /** Пришедший извне ID сотрудника – строка, а в Shift.EmployeeId нужен number */
-  employeeId: string; 
+  employeeId: string;
   date: string;
   shiftTypes: ShiftTypeDefinition[];
   onSave: (shift: Omit<Shift, "ID">) => void;
@@ -37,7 +36,7 @@ export function ShiftDialog({
   open,
   onOpenChange,
 }: ShiftDialogProps) {
-  // Сохраняем ShiftTypeId как число, поэтому если shiftTypes[0]?.ID отсутствует, подставим 0
+  // Инициализируем значения формы, используя значения первого типа смены, если они не заданы
   const [formData, setFormData] = useState({
     shiftTypeId: shift?.ShiftTypeId ?? shiftTypes[0]?.ID ?? 0,
     startTime: shift?.StartTime ?? shiftTypes[0]?.DefaultStartTime ?? "09:00",
@@ -46,7 +45,7 @@ export function ShiftDialog({
     breakEnd: shift?.BreakEnd ?? shiftTypes[0]?.DefaultBreakEnd ?? "14:00",
   });
 
-  // Изменяем тип смены (ShiftTypeId), парсим значение как число
+  // Обработчик изменения типа смены: обновляем поля времени по умолчанию, согласно выбранному типу
   const handleShiftTypeChange = (rawValue: string) => {
     const newShiftTypeId = Number(rawValue);
     const selectedType = shiftTypes.find((type) => type.ID === newShiftTypeId);
@@ -61,22 +60,29 @@ export function ShiftDialog({
     });
   };
 
-  // Отправка формы
+  // Обработчик сабмита: перед сохранением вычисляем часы с учётом параметра RequiredStartEndTime из выбранного типа смены
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Считаем продолжительность смены
+    // Находим выбранный тип смены
+    const selectedType = shiftTypes.find(
+      (type) => type.ID === formData.shiftTypeId
+    );
+    // Из выбранного типа получаем RequiredStartEndTime (если значение не задано – по умолчанию true)
+    const requiredStartEndTime = selectedType?.RequiredStartEndTime ?? true;
+
+    // Вызываем функцию расчета часов с передачей дополнительного параметра
     const hours = calculateShiftHours(
       formData.startTime,
       formData.endTime,
       formData.breakStart,
-      formData.breakEnd
+      formData.breakEnd,
+      requiredStartEndTime
     );
 
     // Определяем, что смена считается ночной, если время окончания меньше времени начала
     const isNightShift = formData.endTime < formData.startTime;
 
-    // Вызываем onSave, передавая поля с заглавной буквы
     onSave({
       EmployeeId: Number(employeeId),
       Date: date,
@@ -97,8 +103,6 @@ export function ShiftDialog({
       <DialogTitle>{shift ? "Изменить смену" : "Добавить смену"}</DialogTitle>
       <DialogContent>
         <DialogContentText>Выберите тип и введите время</DialogContentText>
-
-        {/* Форма: тип смены и времена */}
         <form onSubmit={handleSubmit}>
           <FormControl fullWidth margin="normal" required>
             <InputLabel id="shift-type-label">Тип смены</InputLabel>
@@ -116,10 +120,10 @@ export function ShiftDialog({
               ))}
             </Select>
           </FormControl>
-
           <Grid container spacing={2}>
             <Grid item xs={6}>
               <TextField
+                fullWidth
                 id="startTime"
                 label="Начало смены"
                 type="time"
@@ -129,12 +133,12 @@ export function ShiftDialog({
                 }
                 InputLabelProps={{ shrink: true }}
                 inputProps={{ step: 300 }}
-                fullWidth
                 required
               />
             </Grid>
             <Grid item xs={6}>
               <TextField
+                fullWidth
                 id="endTime"
                 label="Окончание смены"
                 type="time"
@@ -144,15 +148,14 @@ export function ShiftDialog({
                 }
                 InputLabelProps={{ shrink: true }}
                 inputProps={{ step: 300 }}
-                fullWidth
                 required
               />
             </Grid>
           </Grid>
-
           <Grid container spacing={2} sx={{ mt: 2 }}>
             <Grid item xs={6}>
               <TextField
+                fullWidth
                 id="breakStart"
                 label="Начало перерыва"
                 type="time"
@@ -162,12 +165,12 @@ export function ShiftDialog({
                 }
                 InputLabelProps={{ shrink: true }}
                 inputProps={{ step: 300 }}
-                fullWidth
                 required
               />
             </Grid>
             <Grid item xs={6}>
               <TextField
+                fullWidth
                 id="breakEnd"
                 label="Окончание перерыва"
                 type="time"
@@ -177,12 +180,10 @@ export function ShiftDialog({
                 }
                 InputLabelProps={{ shrink: true }}
                 inputProps={{ step: 300 }}
-                fullWidth
                 required
               />
             </Grid>
           </Grid>
-
           <DialogActions sx={{ mt: 2 }}>
             <Button onClick={() => onOpenChange(false)}>Отмена</Button>
             <Button type="submit" variant="contained">
