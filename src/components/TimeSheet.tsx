@@ -58,7 +58,7 @@ import { ShiftTypeDialog } from './ShiftTypeDialog';
 import { getEmployee, deleteEmployee } from "../services/userService";
 import { createShiftType, deleteShiftType, getShiftTypes, updateShiftType } from "../services/shiftTypeService"; 
 import { createShift, deleteShift, getShifts, updateShift } from '../services/shiftService';
-import { createShiftPattern, deleteShiftPattern, updateShiftPattern } from '../services/shiftPatternService';
+import { createShiftPattern, deleteShiftPattern, getShiftPatterns, updateShiftPattern } from '../services/shiftPatternService';
 
 type ViewPeriod = 'week' | 'month' | 'year';
 
@@ -82,6 +82,20 @@ export default function TimeSheet() {
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewPeriod, setViewPeriod] = useState<ViewPeriod>('week');
+
+  useEffect(() => {
+    async function loadShiftPatterns() {
+      try {
+        const patterns = await getShiftPatterns();
+        console.log("✅ Получены паттерны смен:", patterns);
+        setShiftPatterns(patterns);
+      } catch (error) {
+        console.error("❌ Ошибка загрузки паттернов смен:", error);
+      }
+    }
+    loadShiftPatterns();
+  }, []);
+  
 
 
 
@@ -208,16 +222,13 @@ useEffect(() => {
  // ===========================
 // Shift Pattern management
 // ===========================
-
+// Создание нового паттерна
 const handleSavePattern = async (pattern: ShiftPattern): Promise<void> => {
-  // Подготавливаем данные без поля ID
-  const patternData = {
-    Name: pattern.Name,
-    Pattern: pattern.Pattern,
-  };
-
   if (pattern.ID === 0) {
-    // Если паттерн новый (ID === 0), создаём его на сервере
+    const patternData = {
+      Name: pattern.Name,
+      Pattern: pattern.Pattern,
+    };
     try {
       const newId = await createShiftPattern(patternData);
       const newPattern: ShiftPattern = { ...pattern, ID: newId };
@@ -225,8 +236,16 @@ const handleSavePattern = async (pattern: ShiftPattern): Promise<void> => {
     } catch (error) {
       console.error("Ошибка создания паттерна:", error);
     }
-  } else {
-    // Если паттерн уже существует, обновляем его на сервере
+  }
+};
+
+// Обновление существующего паттерна
+const handleUpdatePattern = async (pattern: ShiftPattern): Promise<void> => {
+  if (pattern.ID !== 0) {
+    const patternData = {
+      Name: pattern.Name,
+      Pattern: pattern.Pattern,
+    };
     try {
       await updateShiftPattern(pattern.ID, patternData);
       setShiftPatterns((prev) =>
@@ -238,6 +257,7 @@ const handleSavePattern = async (pattern: ShiftPattern): Promise<void> => {
   }
 };
 
+// Удаление паттерна
 const handleDeletePattern = async (patternId: number): Promise<void> => {
   try {
     await deleteShiftPattern(patternId);
@@ -246,6 +266,7 @@ const handleDeletePattern = async (patternId: number): Promise<void> => {
     console.error("Ошибка удаления паттерна:", error);
   }
 };
+
 
   // ===========================
   // Assign shift patterns
@@ -1013,6 +1034,7 @@ const handleDeleteShift = async (
           <ShiftPatternForm
             existingPatterns={shiftPatterns}
             onSave={handleSavePattern}
+            onUpdate={handleUpdatePattern}
             onDelete={handleDeletePattern}
           />
         </DialogContent>
