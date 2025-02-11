@@ -34,6 +34,7 @@ export interface ShiftTypeDefinition {
   TextColor: string;
   AffectsWorkingNorm: boolean;  // влияет ли тип смены на рабочую норму
   RequiredStartEndTime: boolean;// обязательны ли время начала/окончания смены и перерыв
+  CivilLawContract: boolean;    //Является ли смена выполненной по договору ГПХ
   Description?: string;
   DefaultStartTime: string;     // время начала смены по умолчанию
   DefaultEndTime: string;       // время окончания смены по умолчанию

@@ -39,8 +39,9 @@ export function ShiftTypeDialog({
     Name: "",
     BackgroundColor: "#E5EDFF",
     TextColor: "#1E40AF",
-    AffectsWorkingNorm: true,
+    AffectsWorkingNorm: false,
     RequiredStartEndTime: true,
+    CivilLawContract: false,
     Description: "",
     DefaultStartTime: "09:00",
     DefaultEndTime: "17:00",
@@ -56,6 +57,7 @@ export function ShiftTypeDialog({
       TextColor: type.TextColor,
       AffectsWorkingNorm: type.AffectsWorkingNorm,
       RequiredStartEndTime: type.RequiredStartEndTime,
+      CivilLawContract: type.CivilLawContract,
       Description: type.Description || "",
       DefaultStartTime: type.DefaultStartTime,
       DefaultEndTime: type.DefaultEndTime,
@@ -104,8 +106,9 @@ export function ShiftTypeDialog({
       Name: "",
       BackgroundColor: "#E5EDFF",
       TextColor: "#1E40AF",
-      AffectsWorkingNorm: true,
+      AffectsWorkingNorm: false,
       RequiredStartEndTime: true,
+      CivilLawContract: false,
       Description: "",
       DefaultStartTime: "09:00",
       DefaultEndTime: "17:00",
@@ -357,6 +360,22 @@ export function ShiftTypeDialog({
                   />
                 }
                 label="Влияет на норму рабочего времени"
+                sx={{ mb: 2 }}
+              />
+                <FormControlLabel
+                control={
+                  <Switch
+                    id="civilLawContract"
+                    checked={formData.CivilLawContract}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        CivilLawContract: e.target.checked,
+                      })
+                    }
+                  />
+                }
+                label="Смена ГПХ?"
                 sx={{ mb: 2 }}
               />
 

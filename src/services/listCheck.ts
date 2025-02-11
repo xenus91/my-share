@@ -289,6 +289,7 @@ export async function ensureShiftTypeListExists(): Promise<void> {
         { Title: "TextColor", FieldTypeKind: 2 },          // Текстовое поле
         { Title: "AffectsWorkingNorm", FieldTypeKind: 8 },   // Булево поле
         { Title: "RequiredStartEndTime", FieldTypeKind: 8 }, // Булево поле
+        { Title: "CivilLawContract", FieldTypeKind: 8 }, // Булево поле
         { Title: "Description", FieldTypeKind: 2 },          // Текстовое поле
         { Title: "DefaultStartTime", FieldTypeKind: 2 },     // Текстовое поле
         { Title: "DefaultEndTime", FieldTypeKind: 2 },       // Текстовое поле
