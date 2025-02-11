@@ -13,10 +13,7 @@ export const lightTheme = createTheme({
     secondary: {
       // Secondary/Темно синий
       main: '#001E64',
-      // Дополнительные цвета можно добавить через расширение темы (custom keys)
-      buttonPressed: '#FC9700',  // Secondary/ButtonPressed
-      grass: '#00BE64',          // Secondary/Травяной
-      extraBlue: '#2FCBFF',       // Secondary/Доп голубой
+
     },
     error: {
       main: '#E05225',           // Error/Ошибка
@@ -45,9 +42,6 @@ export const darkTheme = createTheme({
     secondary: {
       // Secondary/Темно синий Dark
       main: '#001E64',
-      buttonPressed: '#FC9700',  // Secondary/Button Pressed Dark
-      grass: '#00BE64',          // Secondary/Травяной Dark
-      extraBlue: '#2FCBFF',       // Secondary/Доп голубой Dark
     },
     error: {
       main: '#E05225',           // Error/Ошибка Dark

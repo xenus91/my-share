@@ -55,7 +55,7 @@ import AssignShiftPatternForm from './AssignShiftPatternForm';
 import { ShiftCellRenderer } from './ShiftCellRenderer';
 import { EmployeeDialog } from './EmployeeDialog';
 import { ShiftTypeDialog } from './ShiftTypeDialog';
-import { getEmployee, deleteEmployee } from "../services/userService";
+import { getEmployee, deleteEmployee, getWorkloadPeriods } from "../services/userService";
 import { createShiftType, deleteShiftType, getShiftTypes, updateShiftType } from "../services/shiftTypeService"; 
 import { createShift, deleteShift, getShifts, updateShift } from '../services/shiftService';
 import { createShiftPattern, deleteShiftPattern, getShiftPatterns, updateShiftPattern } from '../services/shiftPatternService';
@@ -99,23 +99,31 @@ export default function TimeSheet() {
 
 
 
-useEffect(() => {
-  async function loadEmployees() {
-    try {
-      const employees = await getEmployee();
-      console.log("✅ Загружены сотрудники:", employees);
-      const entries: TimeSheetEntry[] = employees.map((emp: Employee) => ({
-        ...emp,
-        shifts: {},
-        workloadPeriods: emp.workloadPeriods || [],
-      }));
-      setTimeData(entries);
-    } catch (error) {
-      console.error("❌ Ошибка загрузки сотрудников:", error);
+  useEffect(() => {
+    async function loadEmployeesAndWorkloadPeriods() {
+      try {
+        // Загружаем сотрудников и периоды занятости параллельно
+        const [employees, periods] = await Promise.all([
+          getEmployee(),
+          getWorkloadPeriods()
+        ]);
+        console.log("✅ Загружены сотрудники:", employees);
+        console.log("✅ Загружены периоды занятости:", periods);
+  
+        // Для каждого сотрудника фильтруем периоды, соответствующие его ID
+        const entries: TimeSheetEntry[] = employees.map((emp: Employee) => ({
+          ...emp,
+          shifts: {},
+          workloadPeriods: periods.filter((p) => p.EmployeeId === emp.ID) || [],
+        }));
+  
+        setTimeData(entries);
+      } catch (error) {
+        console.error("❌ Ошибка загрузки сотрудников или периодов занятости:", error);
+      }
     }
-  }
-  loadEmployees();
-}, []);
+    loadEmployeesAndWorkloadPeriods();
+  }, []);
 
   // Типы смен (ID — число)
   const [shiftTypes, setShiftTypes] = useState<ShiftTypeDefinition[]>([
@@ -182,15 +190,21 @@ useEffect(() => {
   ]);
 
   useEffect(() => {
+    // Если сотрудников ещё нет, ничего не делаем.
+    if (timeData.length === 0) return;
+  
     async function loadShifts() {
       try {
         const shifts = await getShifts();
         console.log("Запрос getShifts выполнен", shifts);
+        // Обновляем timeData, добавляя смены к каждому сотруднику
         setTimeData((prevData) =>
           prevData.map((employee) => {
+            // Фильтруем смены для данного сотрудника
             const employeeShifts = shifts.filter(
               (shift) => shift.EmployeeId === employee.ID
             );
+            // Группируем смены по дате
             const shiftsByDate = employeeShifts.reduce(
               (acc, shift) => {
                 const formattedDate = format(new Date(shift.Date), 'yyyy-MM-dd');
@@ -212,9 +226,8 @@ useEffect(() => {
         console.error("Ошибка загрузки смен:", error);
       }
     }
-    
     loadShifts();
-  }, []); // например, пустой массив зависимостей
+  }, [timeData.length]); // зависимость от количества сотрудников
   
 
  // ===========================
@@ -793,13 +806,10 @@ const handleDeleteShift = async (
                   alignItems: "stretch",
                   px: 1,
                   py: 1,
-                  borderRight: 1,
+                  //borderRight: 1,
                   borderColor: "divider",
-                  backgroundColor: isHoliday
-                    ? "red"
-                    : isPrevHoliday
-                    ? "orange"
-                    : "grey.100",
+                  backgroundColor: isHoliday ? "rgba(255, 0, 0, 0.3)" : isPrevHoliday ? "orange" : undefined,
+                  //color: isHoliday ? "white" : undefined,
                   height: "100%",
                 }}
               >
@@ -830,7 +840,7 @@ const handleDeleteShift = async (
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "flex-end",
-                    maxHeight: 80,
+                    //maxHeight: 80,
                     overflowY: "auto",
                     pr: 1,
                   }}
@@ -893,7 +903,7 @@ const handleDeleteShift = async (
       filter: false,
     },
     rowHeight: 80,
-    headerHeight: 100,
+    headerHeight: 120,
     components: {
       // Рендер ячейки сотрудника (левый столбец)
       employeeCellRenderer: (params: ICellRendererParams) => {
@@ -901,53 +911,73 @@ const handleDeleteShift = async (
         const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
         const employee = params.data as TimeSheetEntry;
         if (!employee) return null;
-
+      
         const handleMenuOpen = (e: React.MouseEvent<HTMLButtonElement>) => {
           e.stopPropagation();
           setMenuAnchorEl(e.currentTarget);
         };
+      
         const handleMenuClose = () => setMenuAnchorEl(null);
-
+      
         return (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Box>
-                <Typography variant="subtitle1">{employee.Title}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {employee.JobTitle}
-                </Typography>
-              </Box>
-              <Box>
-                <Button
-                  onClick={handleMenuOpen}
-                  variant="text"
-                  sx={{ minWidth: 'auto' }}
-                >
-                  <Settings style={{ height: 16, width: 16 }} />
-                </Button>
-                <Menu anchorEl={menuAnchorEl} open={Boolean(menuAnchorEl)} onClose={handleMenuClose}>
-                  <MenuItem
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setDialogOpen(true);
-                      handleMenuClose();
-                    }}
-                  >
-                    <Pencil style={{ marginRight: 8, height: 16, width: 16 }} />
-                    Изменить
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      params.context.handleDeleteEmployee(employee.ID);
-                      handleMenuClose();
-                    }}
-                  >
-                    <Trash2 style={{ marginRight: 8, height: 16, width: 16 }} />
-                    Удалить
-                  </MenuItem>
-                </Menu>
-              </Box>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              position: 'relative',
+              paddingLeft: '30px', // резервируем место для иконки
+              // При наведении делаем иконку видимой
+              '&:hover .settingsButton': { opacity: 1 },
+            }}
+          >
+            {/* Кнопка с иконкой (шестерёнкой) – скрыта по умолчанию */}
+            <Button
+              className="settingsButton"
+              onClick={handleMenuOpen}
+              variant="text"
+              sx={{
+                opacity: 0,
+                transition: 'opacity 0.3s',
+                position: 'absolute',
+                left: 0,
+                minWidth: 'auto',
+                padding: 0,
+              }}
+            >
+              <Settings style={{ height: 16, width: 16 }} />
+            </Button>
+      
+            {/* Информация о сотруднике */}
+            <Box>
+              <Typography variant="subtitle1">{employee.Title}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {employee.JobTitle}
+              </Typography>
             </Box>
+      
+            <Menu anchorEl={menuAnchorEl} open={Boolean(menuAnchorEl)} onClose={handleMenuClose}>
+              <MenuItem
+                onClick={(e) => {
+                  e.preventDefault();
+                  setDialogOpen(true);
+                  handleMenuClose();
+                }}
+              >
+                <Pencil style={{ marginRight: 8, height: 16, width: 16 }} />
+                Изменить
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  params.context.handleDeleteEmployee(employee.ID);
+                  handleMenuClose();
+                }}
+              >
+                <Trash2 style={{ marginRight: 8, height: 16, width: 16 }} />
+                Удалить
+              </MenuItem>
+            </Menu>
+      
             <EmployeeDialog
               open={dialogOpen}
               onOpenChange={setDialogOpen}

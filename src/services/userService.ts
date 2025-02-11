@@ -314,7 +314,33 @@ export async function deleteWorkloadPeriod(periodId: number) {
 }
 
 
+// Функция для получения всех периодов занятости
+export async function getWorkloadPeriods(): Promise<WorkloadPeriod[]> {
+  try {
+    const response = await apiClient.get("/web/lists/GetByTitle('WorkloadPeriods')/items", {
+      headers: { Accept: "application/json;odata=verbose" },
+    });
+    console.log("✅ Получены периоды занятости:", response.data);
 
+    // Если вам нужны все данные, можно вернуть объект целиком,
+    // либо, если требуется переименование ключей, например, чтобы привести их к вашему интерфейсу,
+    // вернуть все свойства и дополнительно задать нужные поля.
+    const periods: WorkloadPeriod[] = response.data.d.results.map((item: any) => ({
+      ...item, // возвращаем все свойства, полученные из SharePoint
+      // Переименовываем поле Id в ID (если требуется)
+      ID: item.Id,
+      // Если SharePoint возвращает свойства с именами, отличными от ваших, можно задать их здесь:
+      StartDate: item.StartDate,
+      EndDate: item.EndDate,
+      Fraction: item.Fraction,
+      EmployeeId: item.EmployeeId, // убедитесь, что это имя поля совпадает с настройками списка
+    }));
+    return periods;
+  } catch (error) {
+    console.error("❌ Ошибка загрузки периодов занятости:", error);
+    throw error;
+  }
+}
 
 
 
