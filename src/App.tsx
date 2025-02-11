@@ -1,9 +1,7 @@
 import  { useEffect, useState } from "react";
 import TimeSheet from "./components/TimeSheet";
-import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
-import { lightTheme, darkTheme } from "./theme";
-import ThemeToggle from "./components/ThemeToggle"; // импорт переключателя
+
 import {
   ensureEmployeesListExists,
   ensureWorkloadPeriodsListExists,
@@ -23,7 +21,6 @@ import "./App.css";
 function App() {
   const [openDialog, setOpenDialog] = useState(true);
   const [status, setStatus] = useState<"loading" | "done" | "error">("loading");
-  const [themeMode, setThemeMode] = useState<"light" | "dark">("light");
 
   useEffect(() => {
     Promise.all([
@@ -50,11 +47,8 @@ function App() {
   }, []);
 
   return (
-    <ThemeProvider theme={themeMode === "light" ? lightTheme : darkTheme}>
+    <>
       <CssBaseline />
-      <Box sx={{ p: 2, display: "flex", justifyContent: "flex-end" }}>
-        <ThemeToggle mode={themeMode} onChange={setThemeMode} />
-      </Box>
       <TimeSheet />
       <Dialog open={openDialog}>
         <DialogContent>
@@ -78,7 +72,7 @@ function App() {
           )}
         </DialogContent>
       </Dialog>
-    </ThemeProvider>
+    </>
   );
 }
 
