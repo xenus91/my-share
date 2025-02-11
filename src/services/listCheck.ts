@@ -393,7 +393,7 @@ export async function ensureShiftsListExists(): Promise<void> {
             FieldTypeKind: 7, // Lookup
             LookupListId: `{${shiftTypeListGuid}}`,
             LookupWebId: `{${webGuid}}`,
-            LookupFieldName: "Title",
+            LookupFieldName: "Name",
             Required: true,
           },
         };

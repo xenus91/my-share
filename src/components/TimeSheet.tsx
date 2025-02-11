@@ -57,6 +57,7 @@ import { EmployeeDialog } from './EmployeeDialog';
 import { ShiftTypeDialog } from './ShiftTypeDialog';
 import { getEmployee, deleteEmployee } from "../services/userService";
 import { createShiftType, deleteShiftType, getShiftTypes, updateShiftType } from "../services/shiftTypeService"; 
+import { createShift, deleteShift, getShifts, updateShift } from '../services/shiftService';
 
 type ViewPeriod = 'week' | 'month' | 'year';
 
@@ -144,6 +145,8 @@ useEffect(() => {
     },*/
   ]);
 
+ 
+
   // Загрузка типов смен
   useEffect(() => {
     async function loadShiftTypes() {
@@ -162,6 +165,44 @@ useEffect(() => {
   const [timeData, setTimeData] = useState<TimeSheetEntry[]>([
    
   ]);
+
+  useEffect(() => {
+    if (timeData.length === 0) return;
+  
+    async function loadShifts() {
+      try {
+        const shifts = await getShifts();
+        setTimeData((prevData) =>
+          prevData.map((employee) => {
+            const employeeShifts = shifts.filter(
+              (shift) => shift.EmployeeId === employee.ID
+            );
+            const shiftsByDate = employeeShifts.reduce(
+              (acc, shift) => {
+                // Преобразуем дату смены в строку формата "yyyy-MM-dd"
+                const formattedDate = format(new Date(shift.Date), 'yyyy-MM-dd');
+                if (!acc[formattedDate]) {
+                  acc[formattedDate] = [];
+                }
+                acc[formattedDate].push(shift);
+                return acc;
+              },
+              {} as { [date: string]: Shift[] }
+            );
+            return {
+              ...employee,
+              shifts: shiftsByDate,
+            };
+          })
+        );
+      } catch (error) {
+        console.error("Ошибка загрузки смен:", error);
+      }
+    }
+  
+    loadShifts();
+  }, [timeData.length]);
+  
 
   // ===========================
   // Shift Pattern management
@@ -383,18 +424,22 @@ const handleDeleteShiftType = async (ID: number): Promise<void> => {
 };
 
 
-  // ===========================
-  // Shifts management
-  // ===========================
-  // Добавить смену
-  const handleAddShift = (
-    employeeId: number,
-    date: string,
-    shiftData: Omit<Shift, 'ID'>
-  ) => {
+ // ===========================
+// Shifts management
+// ===========================
+
+// Добавить смену
+const handleAddShift = async (
+  employeeId: number,
+  date: string,
+  shiftData: Omit<Shift, 'ID'>
+): Promise<void> => {
+  try {
+    // Создаем смену через сервис, получая новый ID из SharePoint
+    const newId = await createShift(shiftData);
     const newShift: Shift = {
       ...shiftData,
-      ID: Math.floor(Math.random() * 1000000) + 1, // Генерируем числовой ID
+      ID: newId,
     };
     setTimeData((prevData) =>
       prevData.map((employee) => {
@@ -410,15 +455,20 @@ const handleDeleteShiftType = async (ID: number): Promise<void> => {
         return employee;
       })
     );
-  };
+  } catch (error) {
+    console.error("Ошибка при добавлении смены:", error);
+  }
+};
 
-  // Обновить смену
-  const handleUpdateShift = (
-    employeeId: number,
-    date: string,
-    shiftId: number,
-    shiftData: Omit<Shift, 'ID'>
-  ) => {
+// Обновить смену
+const handleUpdateShift = async (
+  employeeId: number,
+  date: string,
+  shiftId: number,
+  shiftData: Omit<Shift, 'ID'>
+): Promise<void> => {
+  try {
+    await updateShift(shiftId, shiftData);
     setTimeData((prevData) =>
       prevData.map((employee) => {
         if (employee.ID === employeeId) {
@@ -435,10 +485,19 @@ const handleDeleteShiftType = async (ID: number): Promise<void> => {
         return employee;
       })
     );
-  };
+  } catch (error) {
+    console.error("Ошибка при обновлении смены:", error);
+  }
+};
 
-  // Удалить смену
-  const handleDeleteShift = (employeeId: number, date: string, shiftId: number) => {
+// Удалить смену
+const handleDeleteShift = async (
+  employeeId: number,
+  date: string,
+  shiftId: number
+): Promise<void> => {
+  try {
+    await deleteShift(shiftId);
     setTimeData((prevData) =>
       prevData.map((employee) => {
         if (employee.ID === employeeId) {
@@ -453,7 +512,10 @@ const handleDeleteShiftType = async (ID: number): Promise<void> => {
         return employee;
       })
     );
-  };
+  } catch (error) {
+    console.error("Ошибка при удалении смены:", error);
+  }
+};
 
   // ===========================
   // AgGrid: row data
