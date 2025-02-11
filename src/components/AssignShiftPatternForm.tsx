@@ -1,6 +1,15 @@
-//
 import React, { useState } from "react";
 import { format, addDays } from "date-fns";
+import {
+  Box,
+  Button,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { ShiftPattern, ShiftTypeDefinition } from "../types";
 
 interface AssignShiftPatternFormProps {
@@ -23,19 +32,19 @@ export default function AssignShiftPatternForm({
   onAssign,
 }: AssignShiftPatternFormProps) {
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
-  // Здесь будем хранить числовые ID, поэтому указываем тип number для shiftPatternId и shiftTypeId
-  const [shiftPatternId, setShiftPatternId] = useState<number | null>(null);
-  const [shiftTypeId, setShiftTypeId] = useState<number | null>(null);
+  const [shiftPatternId, setShiftPatternId] = useState<number | "">("");
+  const [shiftTypeId, setShiftTypeId] = useState<number | "">("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Находим выбранное правило по его числовому ID
-    const selectedPattern = shiftPatterns.find((p) => p.ID === shiftPatternId);
-    // Аналогично для типа смены
-    const selectedShiftType = shiftTypes.find((type) => type.ID === shiftTypeId);
+    const spId = typeof shiftPatternId === "number" ? shiftPatternId : 0;
+    const stId = typeof shiftTypeId === "number" ? shiftTypeId : 0;
+
+    const selectedPattern = shiftPatterns.find((p) => p.ID === spId);
+    const selectedShiftType = shiftTypes.find((type) => type.ID === stId);
 
     if (!selectedPattern || !selectedShiftType || !startDate || !endDate) {
       alert("Заполните все поля");
@@ -53,7 +62,7 @@ export default function AssignShiftPatternForm({
       let dayIndex = 0;
 
       while (currentDate <= new Date(endDate)) {
-        // Используем свойство Pattern (с заглавной буквы) для проверки дня
+        // Если по циклу правило чередования возвращает true, создаём назначение
         if (selectedPattern.Pattern[dayIndex % selectedPattern.Pattern.length]) {
           assignments.push({
             employeeId,
@@ -70,89 +79,101 @@ export default function AssignShiftPatternForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mb-4 p-4 bg-gray-100 rounded">
-      <h3 className="text-lg font-bold mb-2">Назначить график сотрудникам</h3>
-      
-      <div className="mb-2">
-        <label className="block mb-1">Сотрудники</label>
-        <select
+    <Box
+      component="form"
+      onSubmit={handleSubmit}
+      sx={{ p: 3, bgcolor: "grey.100", borderRadius: 2 }}
+    >
+      <Typography variant="h6" sx={{ mb: 2 }}>
+        Назначить график сотрудникам
+      </Typography>
+
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <InputLabel id="employees-label">Сотрудники</InputLabel>
+        <Select
+          labelId="employees-label"
           multiple
           value={selectedEmployees}
           onChange={(e) =>
             setSelectedEmployees(
-              Array.from(e.target.selectedOptions, (option) => option.value)
+              typeof e.target.value === "string"
+                ? e.target.value.split(",")
+                : e.target.value
             )
           }
-          className="w-full p-2 border rounded"
+          label="Сотрудники"
         >
           {employees.map((employee) => (
-            <option key={employee.id} value={employee.id}>
+            <MenuItem key={employee.id} value={employee.id}>
               {employee.name}
-            </option>
+            </MenuItem>
           ))}
-        </select>
-      </div>
-      
-      <div className="mb-2">
-        <label className="block mb-1">Правило чередования</label>
-        <select
-          value={shiftPatternId ?? ""}
+        </Select>
+      </FormControl>
+
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <InputLabel id="shift-pattern-label">Правило чередования</InputLabel>
+        <Select
+          labelId="shift-pattern-label"
+          value={shiftPatternId}
           onChange={(e) => setShiftPatternId(Number(e.target.value))}
-          className="w-full p-2 border rounded"
+          label="Правило чередования"
         >
-          <option value="">Выберите правило чередования</option>
+          <MenuItem value="">
+            <em>Выберите правило чередования</em>
+          </MenuItem>
           {shiftPatterns.map((pattern) => (
-            <option key={pattern.ID} value={pattern.ID}>
+            <MenuItem key={pattern.ID} value={pattern.ID}>
               {pattern.Name}
-            </option>
+            </MenuItem>
           ))}
-        </select>
-      </div>
-      
-      <div className="mb-2">
-        <label className="block mb-1">Тип смены</label>
-        <select
-          value={shiftTypeId ?? ""}
+        </Select>
+      </FormControl>
+
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <InputLabel id="shift-type-label">Тип смены</InputLabel>
+        <Select
+          labelId="shift-type-label"
+          value={shiftTypeId}
           onChange={(e) => setShiftTypeId(Number(e.target.value))}
-          className="w-full p-2 border rounded"
+          label="Тип смены"
         >
-          <option value="">Выберите тип смены</option>
+          <MenuItem value="">
+            <em>Выберите тип смены</em>
+          </MenuItem>
           {shiftTypes.map((type) => (
-            <option key={type.ID} value={type.ID}>
+            <MenuItem key={type.ID} value={type.ID}>
               {type.Name}
-            </option>
+            </MenuItem>
           ))}
-        </select>
-      </div>
-      
-      <div className="mb-2">
-        <label className="block mb-1">Дата начала</label>
-        <input
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="w-full p-2 border rounded"
-        />
-      </div>
-      
-      <div className="mb-2">
-        <label className="block mb-1">Дата окончания</label>
-        <input
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className="w-full p-2 border rounded"
-        />
-      </div>
-      
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mr-2"
-        >
+        </Select>
+      </FormControl>
+
+      <TextField
+        fullWidth
+        label="Дата начала"
+        type="date"
+        value={startDate}
+        onChange={(e) => setStartDate(e.target.value)}
+        sx={{ mb: 2 }}
+        InputLabelProps={{ shrink: true }}
+      />
+
+      <TextField
+        fullWidth
+        label="Дата окончания"
+        type="date"
+        value={endDate}
+        onChange={(e) => setEndDate(e.target.value)}
+        sx={{ mb: 2 }}
+        InputLabelProps={{ shrink: true }}
+      />
+
+      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+        <Button type="submit" variant="contained" color="primary">
           Назначить
-        </button>
-      </div>
-    </form>
+        </Button>
+      </Box>
+    </Box>
   );
 }
