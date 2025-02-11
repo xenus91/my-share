@@ -565,50 +565,55 @@ const handleDeleteShift = async (
   // AgGrid: row data
   // ===========================
   const rows = useMemo(() => {
-    return timeData.map((employee) => {
-      const totalHours = days.reduce((sum: number, day: Date) => {
-        const dateStr = format(day, 'yyyy-MM-dd');
-        const shifts = employee.shifts[dateStr] || [];
-        return sum + shifts.reduce((s: number, shift: Shift) => {
-          const shiftType = shiftTypes.find(t => t.ID === shift.ShiftTypeId);
-          // Если CivilLawContract === false, добавляем часы
-          return shiftType && !shiftType.CivilLawContract ? s + shift.Hours : s;
+    return timeData
+      // Фильтруем сотрудников, если activeFilter установлен
+      .filter((employee) => {
+        if (!activeFilter) return true;
+        const shiftsForDate = employee.shifts[activeFilter.date] || [];
+        // Приводим shift.ShiftTypeId к числу для сравнения
+        return shiftsForDate.some(
+          (shift) => Number(shift.ShiftTypeId) === activeFilter.shiftTypeId
+        );
+      })
+      .map((employee) => {
+        const totalHours = days.reduce((sum: number, day: Date) => {
+          const dateStr = format(day, "yyyy-MM-dd");
+          const shifts = employee.shifts[dateStr] || [];
+          return sum + shifts.reduce((s: number, shift: Shift) => {
+            const shiftType = shiftTypes.find(
+              (t) => t.ID === Number(shift.ShiftTypeId)
+            );
+            // Если CivilLawContract === false (или falsy), добавляем часы
+            return shiftType && !shiftType.CivilLawContract ? s + shift.Hours : s;
+          }, 0);
         }, 0);
-      }, 0);
-      const totalHoursCLW = days.reduce((sum: number, day: Date) => {
-        const dateStr = format(day, 'yyyy-MM-dd');
-        const shifts = employee.shifts[dateStr] || [];
-        return sum + shifts.reduce((s: number, shift: Shift) => {
-          // Приводим shift.ShiftTypeId к числу, если это необходимо
-          const shiftType = shiftTypes.find(t => t.ID === Number(shift.ShiftTypeId));
-          // Если поле CivilLawContract отсутствует или равно null, интерпретируем как false
-          const isCLW = shiftType?.CivilLawContract ?? false;
-          return isCLW ? s + shift.Hours : s;
-        }, 0);
-      }, 0);
-      
   
-      const row: any = {
-        ID: employee.ID,
-        employeeId: employee.ID,
-        Title: employee.Title,
-        JobTitle: employee.JobTitle,
-        Department: employee.Department,
-        Office: employee.Office,
-        workloadPeriods: employee.workloadPeriods,
-        totalHours,      // Лента (CivilLawContract === false)
-        totalHoursCLW: totalHoursCLW, // ГПХ (CivilLawContract === true)
-        holidayHours: days.reduce((sum: number, day: Date) => {
-          const dateStr = format(day, 'yyyy-MM-dd');
+        const totalHoursCLW = days.reduce((sum: number, day: Date) => {
+          const dateStr = format(day, "yyyy-MM-dd");
+          const shifts = employee.shifts[dateStr] || [];
+          return sum + shifts.reduce((s: number, shift: Shift) => {
+            const shiftType = shiftTypes.find(
+              (t) => t.ID === Number(shift.ShiftTypeId)
+            );
+            const isCLW = shiftType?.CivilLawContract ?? false;
+            return isCLW ? s + shift.Hours : s;
+          }, 0);
+        }, 0);
+  
+        const holidayHours = days.reduce((sum: number, day: Date) => {
+          const dateStr = format(day, "yyyy-MM-dd");
           const shifts = employee.shifts[dateStr] || [];
           return sum + shifts.reduce((s: number, shift: Shift) => s + calculateHolidayHours(shift), 0);
-        }, 0),
-        normHours: days.reduce((sum: number, day: Date) => {
+        }, 0);
+  
+        const normHours = days.reduce((sum: number, day: Date) => {
           let dayNorm = getDayNorm(day);
-          const dateStr = format(day, 'yyyy-MM-dd');
+          const dateStr = format(day, "yyyy-MM-dd");
           const shifts = employee.shifts[dateStr] || [];
           const hasAffectingShift = shifts.some((shift) => {
-            const shiftType = shiftTypes.find((type) => type.ID === shift.ShiftTypeId);
+            const shiftType = shiftTypes.find(
+              (type) => type.ID === Number(shift.ShiftTypeId)
+            );
             return shiftType?.AffectsWorkingNorm;
           });
           if (hasAffectingShift) return sum;
@@ -624,22 +629,36 @@ const handleDeleteShift = async (
           }
           dayNorm *= fraction;
           return sum + dayNorm;
-        }, 0),
-      };
+        }, 0);
   
-      days.forEach((day) => {
-        const formattedDate = format(day, 'yyyy-MM-dd');
-        const shifts = employee.shifts[formattedDate] || [];
-        row[`day-${formattedDate}`] = {
+        const row: any = {
+          ID: employee.ID,
           employeeId: employee.ID,
-          date: formattedDate,
-          shifts,
+          Title: employee.Title,
+          JobTitle: employee.JobTitle,
+          Department: employee.Department,
+          Office: employee.Office,
+          workloadPeriods: employee.workloadPeriods,
+          totalHours, // Лента (CivilLawContract === false)
+          totalHoursCLW, // ГПХ (CivilLawContract === true)
+          holidayHours,
+          normHours,
         };
-      });
   
-      return row;
-    });
+        days.forEach((day) => {
+          const formattedDate = format(day, "yyyy-MM-dd");
+          const shifts = employee.shifts[formattedDate] || [];
+          row[`day-${formattedDate}`] = {
+            employeeId: employee.ID,
+            date: formattedDate,
+            shifts,
+          };
+        });
+  
+        return row;
+      });
   }, [timeData, days, shiftTypes, activeFilter]);
+  
   
 
   // ===========================
@@ -657,7 +676,7 @@ const handleDeleteShift = async (
     },
     {
       headerComponent: () => (
-        <div style={{ textAlign: "right", fontWeight: "bold", lineHeight: 1.2 }}>
+        <div style={{ textAlign: "right", lineHeight: 1.2 }}>
           <div>Всего часов</div>
           <div style={{ fontSize: "0.8rem" }}>ЛЕНТА | ГПХ</div>
         </div>
@@ -719,108 +738,148 @@ const handleDeleteShift = async (
     },
   ], []);
 
-  const dynamicColumns: ColDef[] = useMemo(() => 
-    days.map((day) => {
-      const formattedDate = format(day, 'yyyy-MM-dd');
-      const isHoliday = productionCalendar2025.some(
-        (calDay: CalendarDay) => calDay.Date === formattedDate && calDay.Type === 'п'
-      );
-      const isPrevHoliday = productionCalendar2025.some(
-        (calDay: CalendarDay) => calDay.Date === formattedDate && calDay.Type === 'пп'
-      );
-
-      // Подсчитываем, сколько смен каждого типа в этот день по всем сотрудникам
-      const countsForDay: { [key: number]: number } = {};
-      shiftTypes.forEach((st) => { countsForDay[st.ID] = 0; });
-
-      timeData.forEach((employee) => {
-        const shifts = employee.shifts[formattedDate] || [];
-        shifts.forEach((shift) => {
-          if (countsForDay[shift.ShiftTypeId] !== undefined) {
-            countsForDay[shift.ShiftTypeId]++;
-          }
+  const dynamicColumns: ColDef[] = useMemo(
+    () =>
+      days.map((day) => {
+        const formattedDate = format(day, "yyyy-MM-dd");
+        const isHoliday = productionCalendar2025.some(
+          (calDay: CalendarDay) =>
+            calDay.Date === formattedDate && calDay.Type === "п"
+        );
+        const isPrevHoliday = productionCalendar2025.some(
+          (calDay: CalendarDay) =>
+            calDay.Date === formattedDate && calDay.Type === "пп"
+        );
+  
+        // Подсчитываем количество смен каждого типа для данного дня
+        const countsForDay: { [key: number]: number } = {};
+        shiftTypes.forEach((st) => {
+          countsForDay[st.ID] = 0;
         });
-      });
-
-      return {
-        headerName: `${format(day, 'EEEEEE', { locale: ru })}\n${format(day, 'd MMM', { locale: ru })}`,
-        field: `day-${formattedDate}`,
-        width: 150,
-        minWidth: 150,
-        sortable: false,
-        cellRenderer: 'shiftCellRenderer',
-        cellRendererParams: {
-          shiftTypes,
-          handleAddShift,
-          handleUpdateShift,
-          handleDeleteShift,
-        },
-        headerComponent: () => {
-          const isFilterActive = activeFilter?.date === formattedDate;
-          return (
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                px: 1,
-                py: 1.5,
-                borderRight: 1,
-                borderColor: 'divider',
-                backgroundColor: isHoliday
-                  ? 'red'
-                  : isPrevHoliday
-                  ? 'orange'
-                  : 'grey.100',
-                height: 'auto',
-              }}
-            >
-              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                <Typography variant="subtitle2">{format(day, 'EEEEEE', { locale: ru })}</Typography>
-                <Typography variant="body2">{format(day, 'd MMM', { locale: ru })}</Typography>
-                <Typography variant="caption">Норма: {getDayNorm(day)}ч</Typography>
+        timeData.forEach((employee) => {
+          const shifts = employee.shifts[formattedDate] || [];
+          shifts.forEach((shift) => {
+            if (countsForDay[shift.ShiftTypeId] !== undefined) {
+              countsForDay[shift.ShiftTypeId]++;
+            }
+          });
+        });
+  
+        return {
+          headerName: `${format(day, "EEEEEE", { locale: ru })}\n${format(
+            day,
+            "d MMM",
+            { locale: ru }
+          )}`,
+          field: `day-${formattedDate}`,
+          width: 150,
+          minWidth: 150,
+          sortable: false,
+          cellRenderer: "shiftCellRenderer",
+          cellRendererParams: {
+            shiftTypes,
+            handleAddShift,
+            handleUpdateShift,
+            handleDeleteShift,
+          },
+          headerComponent: () => {
+            const isFilterActive = activeFilter?.date === formattedDate;
+            return (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "stretch",
+                  px: 1,
+                  py: 1,
+                  borderRight: 1,
+                  borderColor: "divider",
+                  backgroundColor: isHoliday
+                    ? "red"
+                    : isPrevHoliday
+                    ? "orange"
+                    : "grey.100",
+                  height: "100%",
+                }}
+              >
+                {/* Левая колонка: день недели, дата и норма часов */}
+                <Box
+                  sx={{
+                    flexBasis: "40%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    pl: 1,
+                  }}
+                >
+                  <Typography variant="subtitle2">
+                    {format(day, "EEEEEE", { locale: ru })}
+                  </Typography>
+                  <Typography variant="body2">
+                    {format(day, "d MMM", { locale: ru })}
+                  </Typography>
+                  <Typography variant="caption">
+                    НРВ: {getDayNorm(day)}ч
+                  </Typography>
+                </Box>
+                {/* Правая колонка: кнопки типов смен с вертикальной прокруткой */}
+                <Box
+                  sx={{
+                    flexBasis: "60%",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-end",
+                    maxHeight: 80,
+                    overflowY: "auto",
+                    pr: 1,
+                  }}
+                >
+                  {shiftTypes
+                    .filter((type) => countsForDay[type.ID] > 0)
+                    .map((type) => {
+                      const isActive =
+                        isFilterActive && activeFilter?.shiftTypeId === type.ID;
+                      return (
+                        <Button
+                          key={type.ID}
+                          variant="text"
+                          size="small"
+                          sx={{
+                            m: 0.25,
+                            backgroundColor: type.BackgroundColor,
+                            color: type.TextColor,
+                            ...(isActive && { border: "2px solid blue" }),
+                            fontSize: "0.7rem",
+                            textTransform: "none",
+                          }}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            if (isActive) {
+                              // Сброс фильтра
+                              setActiveFilter(null);
+                            } else {
+                              // Установка фильтра
+                              setActiveFilter({
+                                date: formattedDate,
+                                shiftTypeId: type.ID,
+                              });
+                            }
+                          }}
+                        >
+                          {type.Name}: {countsForDay[type.ID]}
+                        </Button>
+                      );
+                    })}
+                </Box>
               </Box>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', mt: 1 }}>
-                {shiftTypes
-                  .filter((type) => countsForDay[type.ID] > 0)
-                  .map((type) => {
-                    const isActive = isFilterActive && activeFilter?.shiftTypeId === type.ID;
-                    return (
-                      <Button
-                        key={type.ID}
-                        variant="text"
-                        size="small"
-                        sx={{
-                          m: 0.5,
-                          backgroundColor: type.BackgroundColor,
-                          color: type.TextColor,
-                          ...(isActive && { border: '2px solid blue' }),
-                        }}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => {
-                          if (isActive) {
-                            // Сбросить фильтр
-                            setActiveFilter(null);
-                          } else {
-                            // Установить фильтр
-                            setActiveFilter({
-                              date: formattedDate,
-                              shiftTypeId: type.ID,
-                            });
-                          }
-                        }}
-                      >
-                        {type.Name}: {countsForDay[type.ID]}
-                      </Button>
-                    );
-                  })}
-              </Box>
-            </Box>
-          );
-        },
-      };
-    })
-  , [days, shiftTypes, timeData, activeFilter]);
+            );
+          },
+        };
+      }),
+    [days, shiftTypes, timeData, activeFilter]
+  );
+  
 
   const allColumns: ColDef[] = useMemo(
     () => [...fixedColumns, ...dynamicColumns],
