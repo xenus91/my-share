@@ -845,6 +845,7 @@ const handleDeleteShift = async (
                     pr: 1,
                   }}
                 >
+                  
                   {shiftTypes
                     .filter((type) => countsForDay[type.ID] > 0)
                     .map((type) => {

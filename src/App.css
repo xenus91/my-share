@@ -1,3 +1,4 @@
+
 #root {
   width: 100%;
   margin: 0;
@@ -38,4 +39,52 @@
 
 .read-the-docs {
   color: #888;
+}
+
+.ag-body-vertical-scroll::-webkit-scrollbar-track,
+.ag-body-vertical-scroll-viewport::-webkit-scrollbar-track,
+.ag-body-vertical-scroll-container::-webkit-scrollbar-track {
+  background-color: #a53b3b !important; /* Светлый серый фон, можно подстроить по вкусу */
+}
+
+.ag-body-vertical-scroll::-webkit-scrollbar,
+.ag-body-vertical-scroll-viewport::-webkit-scrollbar,
+.ag-body-vertical-scroll-container::-webkit-scrollbar {
+  width: 5px !important;   /* Ширина вертикального скроллбара */
+}
+
+.ag-body-vertical-scroll::-webkit-scrollbar-track,
+.ag-body-vertical-scroll-viewport::-webkit-scrollbar-track,
+.ag-body-vertical-scroll-container::-webkit-scrollbar-track {
+  background: transparent !important; /* Прозрачный трек */
+}
+
+.ag-body-vertical-scroll::-webkit-scrollbar-thumb,
+.ag-body-vertical-scroll-viewport::-webkit-scrollbar-thumb,
+.ag-body-vertical-scroll-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.4) !important;
+  border-radius: 5px !important;  /* Скругленные края */
+  border: none !important;
+}
+
+
+/* Для WebKit-браузеров */
+.ag-body-horizontal-scroll::-webkit-scrollbar,
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar,
+.ag-body-horizontal-scroll-container::-webkit-scrollbar {
+  height: 5px !important;   /* Высота горизонтального скроллбара */
+}
+
+.ag-body-horizontal-scroll::-webkit-scrollbar-track,
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar-track,
+.ag-body-horizontal-scroll-container::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.ag-body-horizontal-scroll::-webkit-scrollbar-thumb,
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb,
+.ag-body-horizontal-scroll-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.4) !important;
+  border-radius: 5px !important;
+  border: none !important;
 }
