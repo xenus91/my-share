@@ -72,16 +72,17 @@ interface FilterState {
 }
 
 export default function TimeSheet() {
+   // Состояние для фильтрации по дате/типу смены
   const [activeFilter, setActiveFilter] = useState<FilterState | null>(null);
   const gridRef = useRef<AgGridReact>(null);
-
+  // Состояния для диалогов управления чередованиями
   const [shiftPatterns, setShiftPatterns] = useState<ShiftPattern[]>([]);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [isCreatePatternDialogOpen, setIsCreatePatternDialogOpen] = useState(false);
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewPeriod, setViewPeriod] = useState<ViewPeriod>('week');
-
+// Загрузка паттернов смен
   useEffect(() => {
     async function loadShiftPatterns() {
       try {
@@ -97,7 +98,7 @@ export default function TimeSheet() {
   
 
 
-
+  // Загрузка сотрудников и периодов занятости
   useEffect(() => {
     async function loadEmployeesAndWorkloadPeriods() {
       try {
