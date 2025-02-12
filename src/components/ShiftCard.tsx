@@ -77,7 +77,7 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({
       </Button>
 
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={closeMenu}>
-        <MenuItem onClick={handleEdit}>
+        <MenuItem onClick={handleEdit} sx={{ color: "#267db1" }}>
           <EditIcon fontSize="small" sx={{ mr: 1 }} />
           Изменить
         </MenuItem>

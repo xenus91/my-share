@@ -18,16 +18,15 @@ import {
   InputLabel,
   Select,
 } from '@mui/material';
-import {
-  Clock,
-  Plus,
-  Settings,
-  Trash2,
-  Pencil,
-  UserPlus,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import SettingsIcon from '@mui/icons-material/Settings';
+import AddIcon from '@mui/icons-material/Add';
+import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
+import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
+import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import { AgGridReact } from 'ag-grid-react';
 import { ColDef, GridOptions, ICellRendererParams, ValueFormatterParams } from 'ag-grid-community';
 import { ClientSideRowModelModule } from 'ag-grid-community';
@@ -804,7 +803,7 @@ const handleDeleteShift = async (
                   flexDirection: "row",
                   justifyContent: "space-between",
                   alignItems: "stretch",
-                  px: 1,
+                  px: 0,
                   py: 1,
                   //borderRight: 1,
                   borderColor: "divider",
@@ -945,7 +944,7 @@ const handleDeleteShift = async (
                 padding: 0,
               }}
             >
-              <Settings style={{ height: 16, width: 16 }} />
+              <ManageAccountsIcon style={{ height: 24, width: 24 }} />
             </Button>
       
             {/* Информация о сотруднике */}
@@ -963,18 +962,18 @@ const handleDeleteShift = async (
                   setDialogOpen(true);
                   handleMenuClose();
                 }}
-              >
-                <Pencil style={{ marginRight: 8, height: 16, width: 16 }} />
-                Изменить
+                sx={{ color: "#267db1" }}>
+               <EditIcon fontSize="small" sx={{ mr: 1 }} />
+               Изменить
               </MenuItem>
               <MenuItem
                 onClick={() => {
                   params.context.handleDeleteEmployee(employee.ID);
                   handleMenuClose();
                 }}
-              >
-                <Trash2 style={{ marginRight: 8, height: 16, width: 16 }} />
-                Удалить
+                sx={{ color: "error.main" }}>
+                     <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+                     Удалить
               </MenuItem>
             </Menu>
       
@@ -1027,7 +1026,7 @@ const handleDeleteShift = async (
       <CardHeader
         title={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Clock style={{ height: 24, width: 24 }} />
+            <QueryBuilderIcon style={{ height: 24, width: 24 }} />
             <Typography variant="h6">График работы</Typography>
           </Box>
         }
@@ -1036,14 +1035,14 @@ const handleDeleteShift = async (
             <EmployeeDialog
               onSave={handleAddEmployee}
               trigger={
-                <Button variant="outlined" startIcon={<UserPlus style={{ height: 16, width: 16 }} />}>
+                <Button variant="outlined" startIcon={<PersonAddAltIcon style={{ height: 16, width: 16 }} />}>
                   Добавить сотрудника
                 </Button>
               }
             />
             <Button
               variant="outlined"
-              startIcon={<Settings style={{ height: 16, width: 16 }} />}
+              startIcon={<SettingsIcon style={{ height: 16, width: 16 }} />}
               onClick={handleTopMenuOpen}
             >
               Управление чередованием
@@ -1055,7 +1054,7 @@ const handleDeleteShift = async (
                   handleTopMenuClose();
                 }}
               >
-                <Plus style={{ height: 16, width: 16, marginRight: 4 }} />
+                <AddIcon style={{ height: 16, width: 16, marginRight: 4 }} />
                 Создать чередование
               </MenuItem>
               <MenuItem
@@ -1064,7 +1063,7 @@ const handleDeleteShift = async (
                   handleTopMenuClose();
                 }}
               >
-                <Settings style={{ height: 16, width: 16, marginRight: 4 }} />
+                <SettingsIcon style={{ height: 16, width: 16, marginRight: 4 }} />
                 Применить чередование
               </MenuItem>
             </Menu>
@@ -1074,7 +1073,7 @@ const handleDeleteShift = async (
               onUpdate={handleUpdateShiftType}
               onDelete={handleDeleteShiftType}
               trigger={
-                <Button variant="outlined" startIcon={<Settings style={{ height: 16, width: 16 }} />}>
+                <Button variant="outlined" startIcon={<SettingsIcon style={{ height: 16, width: 16 }} />}>
                   Управление типами смен
                 </Button>
               }
@@ -1095,13 +1094,13 @@ const handleDeleteShift = async (
               </FormControl>
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                 <Button variant="outlined" onClick={handlePrevPeriod}>
-                  <ChevronLeft style={{ height: 16, width: 16 }} />
+                  <ArrowBackIosIcon style={{ height: 24, width: 24 }} />
                 </Button>
                 <Typography variant="subtitle1" sx={{ px: 1, fontWeight: 'medium' }}>
                   {formatPeriodLabel()}
                 </Typography>
                 <Button variant="outlined" onClick={handleNextPeriod}>
-                  <ChevronRight style={{ height: 16, width: 16 }} />
+                  <ArrowForwardIosIcon style={{ height: 24 , width: 24 }} />
                 </Button>
               </Box>
             </Box>
