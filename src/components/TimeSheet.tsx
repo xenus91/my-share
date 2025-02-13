@@ -19,6 +19,10 @@ import {
   Select,
 } from '@mui/material';
 import EditIcon from "@mui/icons-material/Edit";
+// BEGIN BULK MODE: Импорт иконок для bulkMode
+import LibraryAddCheckOutlinedIcon from '@mui/icons-material/LibraryAddCheckOutlined';
+import LibraryAddCheckIcon from '@mui/icons-material/LibraryAddCheck';
+// END BULK MODE
 import DeleteIcon from "@mui/icons-material/Delete";
 import SettingsIcon from '@mui/icons-material/Settings';
 import AddIcon from '@mui/icons-material/Add';
@@ -58,6 +62,7 @@ import { getEmployee, deleteEmployee, getWorkloadPeriods } from "../services/use
 import { createShiftType, deleteShiftType, getShiftTypes, updateShiftType } from "../services/shiftTypeService"; 
 import { createShift, deleteShift, getShifts, updateShift } from '../services/shiftService';
 import { createShiftPattern, deleteShiftPattern, getShiftPatterns, updateShiftPattern } from '../services/shiftPatternService';
+import { ShiftDialog } from './ShiftDialog';
 
 type ViewPeriod = 'week' | 'month' | 'year';
 
@@ -82,6 +87,16 @@ export default function TimeSheet() {
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewPeriod, setViewPeriod] = useState<ViewPeriod>('week');
+
+  // BEGIN BULK MODE: состояние режима массовых операций и выбранных смен
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkSelectedShifts, setBulkSelectedShifts] = useState<
+    { employeeId: number; date: string; shiftId: number }[]
+  >([]);
+  const [bulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
+  // END BULK MODE
+
+
 // Загрузка паттернов смен
   useEffect(() => {
     async function loadShiftPatterns() {
@@ -573,6 +588,31 @@ const handleDeleteShift = async (
     console.error("Ошибка при удалении смены:", error);
   }
 };
+ // BEGIN BULK MODE: глобальное переключение режима и управление выбранными сменами
+ const toggleBulkSelection = (employeeId: number, date: string, shiftId: number) => {
+  setBulkSelectedShifts((prev) => {
+    const exists = prev.some(
+      (item) => item.employeeId === employeeId && item.date === date && item.shiftId === shiftId
+    );
+    if (exists) {
+      return prev.filter(
+        (item) => !(item.employeeId === employeeId && item.date === date && item.shiftId === shiftId)
+      );
+    } else {
+      return [...prev, { employeeId, date, shiftId }];
+    }
+  });
+};
+
+const handleBulkEditSave = (data: Omit<Shift, "ID">) => {
+  bulkSelectedShifts.forEach((item) => {
+    handleUpdateShift(item.employeeId, item.date, item.shiftId, data);
+  });
+  setBulkEditDialogOpen(false);
+  setBulkSelectedShifts([]);
+};
+// END BULK MODE
+
 
   // ===========================
   // AgGrid: row data
@@ -794,6 +834,11 @@ const handleDeleteShift = async (
             handleAddShift,
             handleUpdateShift,
             handleDeleteShift,
+             // BEGIN BULK MODE: передаём функции bulkMode в ShiftCellRenderer
+          bulkMode,
+          bulkSelectedShifts,
+          toggleBulkSelection,
+          // END BULK MODE
           },
           headerComponent: () => {
             const isFilterActive = activeFilter?.date === formattedDate;
@@ -888,7 +933,7 @@ const handleDeleteShift = async (
           },
         };
       }),
-    [days, shiftTypes, timeData, activeFilter]
+    [days, shiftTypes, timeData, activeFilter, bulkMode, bulkSelectedShifts]
   );
   
 
@@ -996,9 +1041,14 @@ const handleDeleteShift = async (
       handleAddShift,
       handleUpdateShift,
       handleDeleteShift,
+      // BEGIN BULK MODE: передача глобальных параметров bulkMode в контекст ag‑grid
+      bulkMode,
+      bulkSelectedShifts,
+      toggleBulkSelection,
+      // END BULK MODE
     },
     suppressDragLeaveHidesColumns: true,
-  }), [handleUpdateEmployee, handleDeleteEmployee, handleAddShift, handleUpdateShift, handleDeleteShift]);
+  }), [handleUpdateEmployee, handleDeleteEmployee, handleAddShift, handleUpdateShift, handleDeleteShift, bulkMode, bulkSelectedShifts]);
 
   useEffect(() => {
     if (gridRef.current?.api) {
@@ -1019,6 +1069,26 @@ const handleDeleteShift = async (
   const handleTopMenuClose = () => {
     setMenuAnchorEl(null);
   };
+// BEGIN BULK MODE: Обработчики для режима массовых операций
+const toggleBulkMode = () => {
+  setBulkMode(!bulkMode);
+  // При отключении режима сбрасываем выбранные смены
+  if (bulkMode) setBulkSelectedShifts([]);
+};
+
+const handleBulkDelete = () => {
+  bulkSelectedShifts.forEach((item) => {
+    handleDeleteShift(item.employeeId, item.date, item.shiftId);
+  });
+  setBulkSelectedShifts([]);
+};
+
+const handleBulkEdit = () => {
+  setBulkEditDialogOpen(true);
+};
+
+// END BULK MODE
+
 
   // ===========================
   // Render
@@ -1080,6 +1150,24 @@ const handleDeleteShift = async (
                 </Button>
               }
             />
+             {/* BEGIN BULK MODE: Кнопка переключения режима bulkMode и дополнительные кнопки */}
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Button
+                variant="outlined"
+                onClick={toggleBulkMode}
+                startIcon={bulkMode ? <LibraryAddCheckIcon /> : <LibraryAddCheckOutlinedIcon />}
+              >
+                {/* Текст можно убрать, если нужен только значок */}
+                Bulk Mode
+              </Button>
+              {bulkMode && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Button variant="outlined" onClick={handleBulkEdit} startIcon={<EditIcon />} />
+                  <Button variant="outlined" onClick={handleBulkDelete} startIcon={<DeleteIcon />} />
+                </Box>
+              )}
+            </Box>
+            {/* END BULK MODE */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <FormControl size="small" sx={{ minWidth: 180 }}>
                 <InputLabel id="view-period-label">Период</InputLabel>
@@ -1178,6 +1266,16 @@ const handleDeleteShift = async (
           <Button onClick={() => setIsAssignDialogOpen(false)}>Закрыть</Button>
         </DialogActions>
       </Dialog>
+       {/* Bulk Edit Dialog для массового редактирования смен */}
+       <ShiftDialog
+        shift={null} // Можно передать значения из первой выбранной смены, если требуется
+        employeeId={bulkSelectedShifts.length > 0 ? bulkSelectedShifts[0].employeeId.toString() : ""}
+        date={bulkSelectedShifts.length > 0 ? bulkSelectedShifts[0].date : ""}
+        shiftTypes={shiftTypes}
+        open={bulkEditDialogOpen}
+        onOpenChange={setBulkEditDialogOpen}
+        onSave={handleBulkEditSave}
+      />
     </Card>
   );
 }

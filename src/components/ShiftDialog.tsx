@@ -17,7 +17,7 @@ import { Shift, ShiftTypeDefinition } from "../types";
 import { calculateShiftHours } from "../lib/utils";
 
 interface ShiftDialogProps {
-  shift?: Shift;
+  shift?: Shift | null;
   /** Пришедший извне ID сотрудника – строка, а в Shift.EmployeeId нужен number */
   employeeId: string;
   date: string;

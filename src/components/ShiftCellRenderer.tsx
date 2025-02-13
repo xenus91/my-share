@@ -1,4 +1,3 @@
-//ShiftCellRenderer.tsx
 import { useState } from "react";
 import type { ICellRendererParams } from "ag-grid-community";
 import { Box, Button, Typography } from "@mui/material";
@@ -18,12 +17,17 @@ interface ExtraCellRendererParams {
     shiftData: Omit<Shift, "ID">
   ) => void;
   handleDeleteShift: (employeeId: number, date: string, shiftId: number) => void;
+  // BEGIN BULK MODE: новые bulkMode пропсы
+  bulkMode: boolean;
+  bulkSelectedShifts: { employeeId: number; date: string; shiftId: number }[];
+  toggleBulkSelection: (employeeId: number, date: string, shiftId: number) => void;
+  // END BULK MODE
 }
 
 export function ShiftCellRenderer(
   props: ICellRendererParams & ExtraCellRendererParams
 ) {
-  const { shiftTypes, handleAddShift, handleUpdateShift, handleDeleteShift } = props;
+  const { shiftTypes, handleAddShift, handleUpdateShift, handleDeleteShift, bulkMode, bulkSelectedShifts, toggleBulkSelection } = props;
   const { employeeId = 0, date = "", shifts = [] } = props.value || {};
   const workloadPeriods = props.data.workloadPeriods || [];
 
@@ -86,8 +90,8 @@ export function ShiftCellRenderer(
           }}
         />
       </Box>
-   {/* Правая часть: блок "Доля" и список смен с кастомным скроллом */}
-   <Scrollbars
+      {/* Правая часть: блок "Доля" и список смен с кастомным скроллом */}
+      <Scrollbars
         style={{ width: "83.33%", height: "100%" }}
         autoHide
         autoHideTimeout={1000}
@@ -113,10 +117,7 @@ export function ShiftCellRenderer(
           }}
         >
           {showFractionBlock && (
-            <Typography
-              variant="caption"
-              sx={{ color: "gray", fontWeight: 600, mb: 1 }}
-            >
+            <Typography variant="caption" sx={{ color: "gray", fontWeight: 600, mb: 1 }}>
               Доля: {Math.round(fraction * 100)}%
             </Typography>
           )}
@@ -125,14 +126,23 @@ export function ShiftCellRenderer(
               key={shift.ID}
               shift={shift}
               shiftTypes={shiftTypes}
-              employeeId={employeeId}
+              employeeId={employeeId.toString()}
               date={date}
-              onUpdateShift={(data) =>
-                handleUpdateShift(employeeId, date, shift.ID, data)
+              onUpdateShift={(data) => handleUpdateShift(employeeId, date, shift.ID, data)}
+              onDeleteShift={(shiftId) => handleDeleteShift(employeeId, date, Number(shiftId))}
+              // BEGIN BULK MODE: Передача bulkMode-пропсов в ShiftCard
+              bulkMode={bulkMode}
+              isBulkSelected={
+                bulkMode &&
+                bulkSelectedShifts.some(
+                  (item) =>
+                    item.employeeId === employeeId &&
+                    item.date === date &&
+                    item.shiftId === shift.ID
+                )
               }
-              onDeleteShift={(shiftId) =>
-                handleDeleteShift(employeeId, date, Number(shiftId))
-              }
+              onToggleBulkSelection={() => toggleBulkSelection(employeeId, date, shift.ID)}
+              // END BULK MODE
             />
           ))}
         </Box>
