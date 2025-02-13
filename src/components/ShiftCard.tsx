@@ -1,13 +1,20 @@
+// ShiftCard.tsx
 import React, { useState, MouseEvent } from "react";
-import { Button, Menu, MenuItem, Typography, Box } from "@mui/material";
+import {
+  Button,
+  Menu,
+  MenuItem,
+  Typography,
+  Box,
+  Tooltip, // <-- Новый импорт Tooltip из MUI
+} from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { Shift, ShiftTypeDefinition } from "../types";
 import { ShiftDialog } from "./ShiftDialog";
-
 // BEGIN BULK MODE: Импорт иконок для невыбранного и выбранного состояния чекбокса
-import RadioButtonUncheckedTwoToneIcon from '@mui/icons-material/RadioButtonUncheckedTwoTone';
-import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import RadioButtonUncheckedTwoToneIcon from "@mui/icons-material/RadioButtonUncheckedTwoTone";
+import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 // END BULK MODE
 
 // Добавляем новые пропсы для bulkMode: bulkMode, isBulkSelected и onToggleBulkSelection
@@ -37,7 +44,9 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({
   onToggleBulkSelection,
 }) => {
   // Приводим shift.ShiftTypeId к числу, если необходимо
-  const shiftType = shiftTypes.find((type) => type.ID === Number(shift.ShiftTypeId));
+  const shiftType = shiftTypes.find(
+    (type) => type.ID === Number(shift.ShiftTypeId)
+  );
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [editOpen, setEditOpen] = useState(false);
 
@@ -64,83 +73,106 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({
   // BEGIN BULK MODE:
   // Если bulkMode активен, переопределяем onClick кнопки, чтобы не открывать меню,
   // а вызывать onToggleBulkSelection для переключения состояния выбора данной смены.
-  const buttonOnClick = bulkMode && onToggleBulkSelection
-    ? (e: MouseEvent<HTMLButtonElement>) => {
-        e.stopPropagation();
-        onToggleBulkSelection();
-      }
-    : openMenu;
+  const buttonOnClick =
+    bulkMode && onToggleBulkSelection
+      ? (e: MouseEvent<HTMLButtonElement>) => {
+          e.stopPropagation();
+          onToggleBulkSelection();
+        }
+      : openMenu;
   // END BULK MODE
+
+  // BEGIN TOOLTIP: Формирование содержимого "облачка" с информацией о смене
+  const tooltipContent = (
+    <Box>
+      <Typography variant="caption" display="block">
+        Начало смены: {shift.StartTime}
+      </Typography>
+      <Typography variant="caption" display="block">
+        Окончание смены: {shift.EndTime}
+      </Typography>
+      <Typography variant="caption" display="block">
+        Начало перерыва: {shift.BreakStart}
+      </Typography>
+      <Typography variant="caption" display="block">
+        Окончание перерыва: {shift.BreakEnd}
+      </Typography>
+    </Box>
+  );
+  // END TOOLTIP
 
   return (
     <>
-      <Button
-        onClick={buttonOnClick} // BEGIN BULK MODE: Используем переопределённый обработчик при bulkMode
-        fullWidth
-        variant="contained"
-        size="small"
-        sx={{
-          backgroundColor: shiftType.BackgroundColor,
-          color: shiftType.TextColor,
-          textTransform: "none",
-          padding: "2px 8px",
-          mb: "1px",
-          position: "relative", // для абсолютного позиционирования чекбокса
-          overflow: "hidden",   // предотвращаем вылезание содержимого
-          "&:hover": { filter: "brightness(90%)" },
-        }}
-      >
-        {/* BEGIN BULK MODE: Отображение чекбокса внутри кнопки */}
-        {bulkMode && onToggleBulkSelection && (
+      {/* Оборачиваем кнопку в Tooltip */}
+      <Tooltip title={tooltipContent} arrow>
+        <Button
+          onClick={buttonOnClick} // BEGIN BULK MODE: Используем переопределённый обработчик при bulkMode
+          fullWidth
+          variant="contained"
+          size="small"
+          sx={{
+            backgroundColor: shiftType.BackgroundColor,
+            color: shiftType.TextColor,
+            textTransform: "none",
+            padding: "2px 8px",
+            mb: "1px",
+            position: "relative", // для абсолютного позиционирования чекбокса
+            overflow: "hidden", // предотвращаем вылезание содержимого
+            "&:hover": { filter: "brightness(90%)" },
+          }}
+        >
+          {/* BEGIN BULK MODE: Отображение чекбокса внутри кнопки */}
+          {bulkMode && onToggleBulkSelection && (
+            <Box
+              onClick={(e) => {
+                e.stopPropagation(); // предотвращаем открытие меню
+                onToggleBulkSelection();
+              }}
+              sx={{
+                // Центрирование чекбокса внутри кнопки
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                zIndex: 2,
+                cursor: "pointer",
+                backgroundColor: "white", // фон белый
+                borderRadius: "50%",
+                width: 18, // уменьшенный размер, чтобы не вылезать за края кнопки
+                height: 18,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {isBulkSelected ? (
+                <CheckCircleRoundedIcon sx={{ fontSize: 22 }} />
+              ) : (
+                <RadioButtonUncheckedTwoToneIcon sx={{ fontSize: 22 }} />
+              )}
+            </Box>
+          )}
+          {/* END BULK MODE */}
           <Box
-            onClick={(e) => {
-              e.stopPropagation(); // предотвращаем открытие меню
-              onToggleBulkSelection();
-            }}
-            sx={{
-              // Центрирование чекбокса внутри кнопки
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              zIndex: 2,
-              cursor: "pointer",
-              backgroundColor: "white", // фон белый
-              borderRadius: "50%",
-              width: 18, // уменьшенный размер, чтобы не вылезать за края кнопки
-              height: 18,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            width="100%"
+            sx={{ opacity: bulkMode ? 0.6 : 1 }}
           >
-            {isBulkSelected ? (
-              <CheckCircleRoundedIcon sx={{ fontSize: 22 }} />
-            ) : (
-              <RadioButtonUncheckedTwoToneIcon sx={{ fontSize: 22 }} />
+            <Typography variant="body2" fontWeight={500}>
+              {shiftType.Description}
+            </Typography>
+            {shift.Hours !== 0 && (
+              <Typography variant="body2" fontWeight={600}>
+                {shift.Hours}ч
+              </Typography>
             )}
           </Box>
-        )}
-        {/* END BULK MODE */}
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          width="100%"
-          sx={{ opacity: bulkMode ? 0.6 : 1 }}
-        >
-          <Typography variant="body2" fontWeight={500}>
-            {shiftType.Description}
-          </Typography>
-          {shift.Hours !== 0 && (
-            <Typography variant="body2" fontWeight={600}>
-              {shift.Hours}ч
-            </Typography>
-          )}
-        </Box>
-      </Button>
+        </Button>
+      </Tooltip>
 
-      {/* Если bulkMode активен, не отображаем контекстное меню */}
+      {/* Если bulkMode не активен, отображаем контекстное меню */}
       {!bulkMode && (
         <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={closeMenu}>
           <MenuItem onClick={handleEdit} sx={{ color: "#267db1" }}>

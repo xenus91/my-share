@@ -533,29 +533,23 @@ const handleAddShift = async (
 };
 
 // Обновить смену
+// Обновить смену — update только нужные поля по shiftId (shiftId глобально уникален)
 const handleUpdateShift = async (
-  employeeId: number,
-  date: string,
   shiftId: number,
-  shiftData: Omit<Shift, 'ID'>
+  shiftData: Omit<Shift, "ID" | "EmployeeId" | "Date">
 ): Promise<void> => {
   try {
     await updateShift(shiftId, shiftData);
     setTimeData((prevData) =>
-      prevData.map((employee) => {
-        if (employee.ID === employeeId) {
-          return {
-            ...employee,
-            shifts: {
-              ...employee.shifts,
-              [date]: employee.shifts[date].map((shift) =>
-                shift.ID === shiftId ? { ...shiftData, ID: shiftId } : shift
-              ),
-            },
-          };
-        }
-        return employee;
-      })
+      prevData.map((employee) => ({
+        ...employee,
+        shifts: Object.keys(employee.shifts).reduce((acc, date) => {
+          acc[date] = employee.shifts[date].map((shift) =>
+            shift.ID === shiftId ? { ...shift, ...shiftData } : shift
+          );
+          return acc;
+        }, {} as { [key: string]: Shift[] }),
+      }))
     );
   } catch (error) {
     console.error("Ошибка при обновлении смены:", error);
@@ -604,9 +598,9 @@ const handleDeleteShift = async (
   });
 };
 
-const handleBulkEditSave = (data: Omit<Shift, "ID">) => {
+const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => {
   bulkSelectedShifts.forEach((item) => {
-    handleUpdateShift(item.employeeId, item.date, item.shiftId, data);
+    handleUpdateShift(item.shiftId, data);
   });
   setBulkEditDialogOpen(false);
   setBulkSelectedShifts([]);

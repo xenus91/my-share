@@ -42,16 +42,15 @@ export async function createShift(
   }
 }
 
+// services/shiftService.ts
 export async function updateShift(
   shiftId: number,
-  shift: Omit<Shift, "ID">
+  shift: Omit<Shift, "ID" | "EmployeeId" | "Date">
 ): Promise<void> {
   try {
     const digest = await getRequestDigest();
     const payload = {
       __metadata: { type: "SP.Data.ShiftsListItem" },
-      EmployeeId: shift.EmployeeId,
-      Date: shift.Date,
       ShiftTypeId: shift.ShiftTypeId,
       StartTime: shift.StartTime,
       EndTime: shift.EndTime,
@@ -81,6 +80,7 @@ export async function updateShift(
     throw error;
   }
 }
+
 
 export async function deleteShift(shiftId: number): Promise<void> {
   try {
