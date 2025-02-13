@@ -36,7 +36,7 @@ export function ShiftDialog({
   open,
   onOpenChange,
 }: ShiftDialogProps) {
-  // Инициализируем форму, используя значения первого типа смены, если они не заданы
+  // Сохраняем ShiftTypeId как число, поэтому если shiftTypes[0]?.ID отсутствует, подставим 0
   const [formData, setFormData] = useState({
     shiftTypeId: shift?.ShiftTypeId ?? shiftTypes[0]?.ID ?? 0,
     startTime: shift?.StartTime ?? shiftTypes[0]?.DefaultStartTime ?? "09:00",
@@ -45,7 +45,7 @@ export function ShiftDialog({
     breakEnd: shift?.BreakEnd ?? shiftTypes[0]?.DefaultBreakEnd ?? "14:00",
   });
 
-  // Обработчик изменения типа смены, обновляет значения времени по умолчанию
+  // Изменяем тип смены (ShiftTypeId), парсим значение как число
   const handleShiftTypeChange = (rawValue: string) => {
     const newShiftTypeId = Number(rawValue);
     const selectedType = shiftTypes.find((type) => type.ID === newShiftTypeId);
@@ -59,17 +59,11 @@ export function ShiftDialog({
     });
   };
 
-  // Обработчик сабмита формы
+  // Отправка формы
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Находим выбранный тип смены, чтобы получить его параметр RequiredStartEndTime
-    const selectedType = shiftTypes.find(
-      (type) => type.ID === formData.shiftTypeId
-    );
-    // Если для данного типа не требуется время начала/окончания, то рабочие часы не рассчитываются
-    const requiredStartEndTime = selectedType?.RequiredStartEndTime ?? true;
-    
+    // Считаем продолжительность смены
     const hours = calculateShiftHours(
       formData.startTime,
       formData.endTime,
@@ -100,10 +94,9 @@ export function ShiftDialog({
     <Dialog open={open} onClose={() => onOpenChange(false)} fullWidth maxWidth="sm">
       <DialogTitle>{shift ? "Изменить смену" : "Добавить смену"}</DialogTitle>
       <DialogContent>
-        <DialogContentText>
-          Выберите тип и введите время
-        </DialogContentText>
+        <DialogContentText>Выберите тип и введите время</DialogContentText>
 
+        {/* Форма: тип смены и времена */}
         <form onSubmit={handleSubmit}>
           <FormControl fullWidth margin="normal" required>
             <InputLabel id="shift-type-label">Тип смены</InputLabel>
@@ -121,7 +114,6 @@ export function ShiftDialog({
               ))}
             </Select>
           </FormControl>
-
           <Grid container spacing={2}>
             <Grid item xs={6}>
               <TextField
@@ -154,7 +146,6 @@ export function ShiftDialog({
               />
             </Grid>
           </Grid>
-
           <Grid container spacing={2} sx={{ mt: 2 }}>
             <Grid item xs={6}>
               <TextField
@@ -187,7 +178,6 @@ export function ShiftDialog({
               />
             </Grid>
           </Grid>
-
           <DialogActions sx={{ mt: 2 }}>
             <Button onClick={() => onOpenChange(false)}>Отмена</Button>
             <Button type="submit" variant="contained">

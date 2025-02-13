@@ -22,7 +22,7 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({
   onUpdateShift,
   onDeleteShift,
 }) => {
-  // Если вдруг shift.ShiftTypeId имеет тип string, приводим его к числу для сравнения с type.ID
+  // Приводим shift.ShiftTypeId к числу, если необходимо
   const shiftType = shiftTypes.find((type) => type.ID === Number(shift.ShiftTypeId));
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -43,7 +43,6 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({
   };
 
   const handleDelete = () => {
-    // Приводим числовой ID смены к строке
     onDeleteShift(shift.ID.toString());
     closeMenu();
   };
@@ -68,14 +67,17 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({
           <Typography variant="body2" fontWeight={500}>
             {shiftType.Description}
           </Typography>
-          <Typography variant="body2" fontWeight={600}>
-            {shift.Hours}ч
-          </Typography>
+          {/* Если Hours не равны 0, отображаем количество часов */}
+          {shift.Hours !== 0 && (
+            <Typography variant="body2" fontWeight={600}>
+              {shift.Hours}ч
+            </Typography>
+          )}
         </Box>
       </Button>
 
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={closeMenu}>
-        <MenuItem onClick={handleEdit}>
+        <MenuItem onClick={handleEdit} sx={{ color: "#267db1" }}>
           <EditIcon fontSize="small" sx={{ mr: 1 }} />
           Изменить
         </MenuItem>

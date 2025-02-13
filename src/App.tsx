@@ -1,27 +1,42 @@
-import { useEffect, useState } from 'react';
-import TimeSheet from './components/TimeSheet';
-import { ensureEmployeesListExists, ensureWorkloadPeriodsListExists, ensureShiftTypeListExists, ensureShiftsListExists, ensureShiftPatternListExists } from './services/listCheck';
+import  { useEffect, useState } from "react";
+import TimeSheet from "./components/TimeSheet";
+import { ThemeProvider } from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
+import { lightTheme, darkTheme } from "./theme";
+import {
+  ensureEmployeesListExists,
+  ensureWorkloadPeriodsListExists,
+  ensureShiftTypeListExists,
+  ensureShiftsListExists,
+  ensureShiftPatternListExists,
+} from "./services/listCheck";
 import {
   Dialog,
   DialogContent,
   Typography,
   LinearProgress,
   Box
-} from '@mui/material';
-import './App.css';
+} from "@mui/material";
+import "./App.css";
 
 function App() {
   const [openDialog, setOpenDialog] = useState(true);
   const [status, setStatus] = useState<"loading" | "done" | "error">("loading");
+  const [themeMode, ] = useState<"light" | "dark">("light");
 
   useEffect(() => {
-    Promise.all([ensureEmployeesListExists(), ensureWorkloadPeriodsListExists(), ensureShiftTypeListExists(), ensureShiftsListExists(), ensureShiftPatternListExists()])
+    Promise.all([
+      ensureEmployeesListExists(),
+      ensureWorkloadPeriodsListExists(),
+      ensureShiftTypeListExists(),
+      ensureShiftsListExists(),
+      ensureShiftPatternListExists(),
+    ])
       .then(() => {
         setStatus("done");
         setTimeout(() => setOpenDialog(false), 1500);
       })
       .catch((error) => {
-        // Если код ошибки = 500 — не показываем ошибку
         if (error?.response?.status === 500) {
           console.warn("Получен статус 500, но не отображаем ошибку.");
           setStatus("done");
@@ -32,9 +47,10 @@ function App() {
         }
       });
   }, []);
-  
+
   return (
-    <>
+    <ThemeProvider theme={themeMode === "light" ? lightTheme : darkTheme}>
+      <CssBaseline />
       <TimeSheet />
       <Dialog open={openDialog}>
         <DialogContent>
@@ -58,7 +74,7 @@ function App() {
           )}
         </DialogContent>
       </Dialog>
-    </>
+    </ThemeProvider>
   );
 }
 

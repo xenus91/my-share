@@ -18,16 +18,15 @@ import {
   InputLabel,
   Select,
 } from '@mui/material';
-import {
-  Clock,
-  Plus,
-  Settings,
-  Trash2,
-  Pencil,
-  UserPlus,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import SettingsIcon from '@mui/icons-material/Settings';
+import AddIcon from '@mui/icons-material/Add';
+import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
+import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
+import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import { AgGridReact } from 'ag-grid-react';
 import { ColDef, GridOptions, ICellRendererParams, ValueFormatterParams } from 'ag-grid-community';
 import { ClientSideRowModelModule } from 'ag-grid-community';
@@ -55,7 +54,7 @@ import AssignShiftPatternForm from './AssignShiftPatternForm';
 import { ShiftCellRenderer } from './ShiftCellRenderer';
 import { EmployeeDialog } from './EmployeeDialog';
 import { ShiftTypeDialog } from './ShiftTypeDialog';
-import { getEmployee, deleteEmployee } from "../services/userService";
+import { getEmployee, deleteEmployee, getWorkloadPeriods } from "../services/userService";
 import { createShiftType, deleteShiftType, getShiftTypes, updateShiftType } from "../services/shiftTypeService"; 
 import { createShift, deleteShift, getShifts, updateShift } from '../services/shiftService';
 import { createShiftPattern, deleteShiftPattern, getShiftPatterns, updateShiftPattern } from '../services/shiftPatternService';
@@ -73,16 +72,17 @@ interface FilterState {
 }
 
 export default function TimeSheet() {
+   // Состояние для фильтрации по дате/типу смены
   const [activeFilter, setActiveFilter] = useState<FilterState | null>(null);
   const gridRef = useRef<AgGridReact>(null);
-
+  // Состояния для диалогов управления чередованиями
   const [shiftPatterns, setShiftPatterns] = useState<ShiftPattern[]>([]);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [isCreatePatternDialogOpen, setIsCreatePatternDialogOpen] = useState(false);
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewPeriod, setViewPeriod] = useState<ViewPeriod>('week');
-
+// Загрузка паттернов смен
   useEffect(() => {
     async function loadShiftPatterns() {
       try {
@@ -98,24 +98,32 @@ export default function TimeSheet() {
   
 
 
-
-useEffect(() => {
-  async function loadEmployees() {
-    try {
-      const employees = await getEmployee();
-      console.log("✅ Загружены сотрудники:", employees);
-      const entries: TimeSheetEntry[] = employees.map((emp: Employee) => ({
-        ...emp,
-        shifts: {},
-        workloadPeriods: emp.workloadPeriods || [],
-      }));
-      setTimeData(entries);
-    } catch (error) {
-      console.error("❌ Ошибка загрузки сотрудников:", error);
+  // Загрузка сотрудников и периодов занятости
+  useEffect(() => {
+    async function loadEmployeesAndWorkloadPeriods() {
+      try {
+        // Загружаем сотрудников и периоды занятости параллельно
+        const [employees, periods] = await Promise.all([
+          getEmployee(),
+          getWorkloadPeriods()
+        ]);
+        console.log("✅ Загружены сотрудники:", employees);
+        console.log("✅ Загружены периоды занятости:", periods);
+  
+        // Для каждого сотрудника фильтруем периоды, соответствующие его ID
+        const entries: TimeSheetEntry[] = employees.map((emp: Employee) => ({
+          ...emp,
+          shifts: {},
+          workloadPeriods: periods.filter((p) => p.EmployeeId === emp.ID) || [],
+        }));
+  
+        setTimeData(entries);
+      } catch (error) {
+        console.error("❌ Ошибка загрузки сотрудников или периодов занятости:", error);
+      }
     }
-  }
-  loadEmployees();
-}, []);
+    loadEmployeesAndWorkloadPeriods();
+  }, []);
 
   // Типы смен (ID — число)
   const [shiftTypes, setShiftTypes] = useState<ShiftTypeDefinition[]>([
@@ -182,19 +190,23 @@ useEffect(() => {
   ]);
 
   useEffect(() => {
+    // Если сотрудников ещё нет, ничего не делаем.
     if (timeData.length === 0) return;
   
     async function loadShifts() {
       try {
         const shifts = await getShifts();
+        console.log("Запрос getShifts выполнен", shifts);
+        // Обновляем timeData, добавляя смены к каждому сотруднику
         setTimeData((prevData) =>
           prevData.map((employee) => {
+            // Фильтруем смены для данного сотрудника
             const employeeShifts = shifts.filter(
               (shift) => shift.EmployeeId === employee.ID
             );
+            // Группируем смены по дате
             const shiftsByDate = employeeShifts.reduce(
               (acc, shift) => {
-                // Преобразуем дату смены в строку формата "yyyy-MM-dd"
                 const formattedDate = format(new Date(shift.Date), 'yyyy-MM-dd');
                 if (!acc[formattedDate]) {
                   acc[formattedDate] = [];
@@ -214,9 +226,8 @@ useEffect(() => {
         console.error("Ошибка загрузки смен:", error);
       }
     }
-  
     loadShifts();
-  }, [timeData.length]);
+  }, [timeData.length]); // зависимость от количества сотрудников
   
 
  // ===========================
@@ -286,8 +297,9 @@ const handleDeletePattern = async (patternId: number): Promise<void> => {
         shiftType.DefaultStartTime,
         shiftType.DefaultEndTime,
         shiftType.DefaultBreakStart,
-        shiftType.DefaultBreakEnd
-      );
+        shiftType.DefaultBreakEnd,
+        shiftType.RequiredStartEndTime ?? true
+      );      
       handleAddShift(
         parseInt(employeeId, 10),
         date,
@@ -567,13 +579,71 @@ const handleDeleteShift = async (
   // ===========================
   const rows = useMemo(() => {
     return timeData
+      // Фильтруем сотрудников, если activeFilter установлен
       .filter((employee) => {
         if (!activeFilter) return true;
-        const shifts = employee.shifts[activeFilter.date] || [];
-        // Смотрим ShiftTypeId
-        return shifts.some((shift) => shift.ShiftTypeId === activeFilter.shiftTypeId);
+        const shiftsForDate = employee.shifts[activeFilter.date] || [];
+        // Приводим shift.ShiftTypeId к числу для сравнения
+        return shiftsForDate.some(
+          (shift) => Number(shift.ShiftTypeId) === activeFilter.shiftTypeId
+        );
       })
       .map((employee) => {
+        const totalHours = days.reduce((sum: number, day: Date) => {
+          const dateStr = format(day, "yyyy-MM-dd");
+          const shifts = employee.shifts[dateStr] || [];
+          return sum + shifts.reduce((s: number, shift: Shift) => {
+            const shiftType = shiftTypes.find(
+              (t) => t.ID === Number(shift.ShiftTypeId)
+            );
+            // Если CivilLawContract === false (или falsy), добавляем часы
+            return shiftType && !shiftType.CivilLawContract ? s + shift.Hours : s;
+          }, 0);
+        }, 0);
+  
+        const totalHoursCLW = days.reduce((sum: number, day: Date) => {
+          const dateStr = format(day, "yyyy-MM-dd");
+          const shifts = employee.shifts[dateStr] || [];
+          return sum + shifts.reduce((s: number, shift: Shift) => {
+            const shiftType = shiftTypes.find(
+              (t) => t.ID === Number(shift.ShiftTypeId)
+            );
+            const isCLW = shiftType?.CivilLawContract ?? false;
+            return isCLW ? s + shift.Hours : s;
+          }, 0);
+        }, 0);
+  
+        const holidayHours = days.reduce((sum: number, day: Date) => {
+          const dateStr = format(day, "yyyy-MM-dd");
+          const shifts = employee.shifts[dateStr] || [];
+          return sum + shifts.reduce((s: number, shift: Shift) => s + calculateHolidayHours(shift), 0);
+        }, 0);
+  
+        const normHours = days.reduce((sum: number, day: Date) => {
+          let dayNorm = getDayNorm(day);
+          const dateStr = format(day, "yyyy-MM-dd");
+          const shifts = employee.shifts[dateStr] || [];
+          const hasAffectingShift = shifts.some((shift) => {
+            const shiftType = shiftTypes.find(
+              (type) => type.ID === Number(shift.ShiftTypeId)
+            );
+            return shiftType?.AffectsWorkingNorm;
+          });
+          if (hasAffectingShift) return sum;
+          let fraction = 1;
+          const workloadPeriods = employee.workloadPeriods ?? [];
+          for (const period of workloadPeriods) {
+            if (
+              (!period.StartDate || period.StartDate <= dateStr) &&
+              (!period.EndDate || period.EndDate >= dateStr)
+            ) {
+              fraction = period.Fraction;
+            }
+          }
+          dayNorm *= fraction;
+          return sum + dayNorm;
+        }, 0);
+  
         const row: any = {
           ID: employee.ID,
           employeeId: employee.ID,
@@ -582,48 +652,14 @@ const handleDeleteShift = async (
           Department: employee.Department,
           Office: employee.Office,
           workloadPeriods: employee.workloadPeriods,
-          totalHours: days.reduce((sum: number, day: Date) => {
-            const dateStr = format(day, 'yyyy-MM-dd');
-            const shifts = employee.shifts[dateStr] || [];
-            // 'Hours' соответствует интерфейсу Shift
-            return sum + shifts.reduce((shiftSum: number, shift: Shift) => shiftSum + shift.Hours, 0);
-          }, 0),
-          holidayHours: days.reduce((sum: number, day: Date) => {
-            const dateStr = format(day, 'yyyy-MM-dd');
-            const shifts = employee.shifts[dateStr] || [];
-            return sum + shifts.reduce((shiftSum: number, shift: Shift) => {
-              return shiftSum + calculateHolidayHours(shift);
-            }, 0);
-          }, 0),
-          normHours: days.reduce((sum: number, day: Date) => {
-            let dayNorm = getDayNorm(day);
-            const dateStr = format(day, 'yyyy-MM-dd');
-            const shifts = employee.shifts[dateStr] || [];
-            const hasAffectingShift = shifts.some((shift) => {
-              const shiftType = shiftTypes.find((type) => type.ID === shift.ShiftTypeId);
-              // 'AffectsWorkingNorm' в интерфейсе ShiftTypeDefinition
-              return shiftType?.AffectsWorkingNorm;
-            });
-            if (hasAffectingShift) return sum;
-            let fraction = 1;
-            const workloadPeriods = employee.workloadPeriods ?? [];
-            // Проверяем, попадает ли дата в период
-            for (const period of workloadPeriods) {
-              if (
-                (!period.StartDate || period.StartDate <= dateStr) &&
-                (!period.EndDate || period.EndDate >= dateStr)
-              ) {
-                fraction = period.Fraction;
-              }
-            }
-            dayNorm *= fraction;
-            return sum + dayNorm;
-          }, 0),
+          totalHours, // Лента (CivilLawContract === false)
+          totalHoursCLW, // ГПХ (CivilLawContract === true)
+          holidayHours,
+          normHours,
         };
-
-        // Динамические поля для каждого дня
+  
         days.forEach((day) => {
-          const formattedDate = format(day, 'yyyy-MM-dd');
+          const formattedDate = format(day, "yyyy-MM-dd");
           const shifts = employee.shifts[formattedDate] || [];
           row[`day-${formattedDate}`] = {
             employeeId: employee.ID,
@@ -631,10 +667,12 @@ const handleDeleteShift = async (
             shifts,
           };
         });
-
+  
         return row;
       });
   }, [timeData, days, shiftTypes, activeFilter]);
+  
+  
 
   // ===========================
   // AgGrid: column defs
@@ -650,14 +688,23 @@ const handleDeleteShift = async (
       suppressMovable: true,
     },
     {
-      headerName: 'Всего часов',
-      field: 'totalHours',
-      width: 120,
-      pinned: 'left',
+      headerComponent: () => (
+        <div style={{ textAlign: "right", lineHeight: 1.2 }}>
+          <div>Всего часов</div>
+          <div style={{ fontSize: "0.8rem" }}>ЛЕНТА | ГПХ</div>
+        </div>
+      ),
+      field: "totalHours",
+      width: 150,
+      pinned: "left",
       sortable: false,
       suppressMovable: true,
-      cellStyle: { textAlign: 'right', fontWeight: 'bold' },
-      valueFormatter: (params: ValueFormatterParams) => `${params.value}ч`,
+      cellStyle: { textAlign: "right", fontWeight: "bold" },
+      valueGetter: (params: any) => {
+        const totalHours = params.data.totalHours;
+        const totalHoursCLW = params.data.totalHoursCLW;
+        return `${totalHours}ч | ${totalHoursCLW}ч`;
+      },
     },
     {
       headerName: 'Праздничные часы',
@@ -704,108 +751,146 @@ const handleDeleteShift = async (
     },
   ], []);
 
-  const dynamicColumns: ColDef[] = useMemo(() => 
-    days.map((day) => {
-      const formattedDate = format(day, 'yyyy-MM-dd');
-      const isHoliday = productionCalendar2025.some(
-        (calDay: CalendarDay) => calDay.Date === formattedDate && calDay.Type === 'п'
-      );
-      const isPrevHoliday = productionCalendar2025.some(
-        (calDay: CalendarDay) => calDay.Date === formattedDate && calDay.Type === 'пп'
-      );
-
-      // Подсчитываем, сколько смен каждого типа в этот день по всем сотрудникам
-      const countsForDay: { [key: number]: number } = {};
-      shiftTypes.forEach((st) => { countsForDay[st.ID] = 0; });
-
-      timeData.forEach((employee) => {
-        const shifts = employee.shifts[formattedDate] || [];
-        shifts.forEach((shift) => {
-          if (countsForDay[shift.ShiftTypeId] !== undefined) {
-            countsForDay[shift.ShiftTypeId]++;
-          }
+  const dynamicColumns: ColDef[] = useMemo(
+    () =>
+      days.map((day) => {
+        const formattedDate = format(day, "yyyy-MM-dd");
+        const isHoliday = productionCalendar2025.some(
+          (calDay: CalendarDay) =>
+            calDay.Date === formattedDate && calDay.Type === "п"
+        );
+        const isPrevHoliday = productionCalendar2025.some(
+          (calDay: CalendarDay) =>
+            calDay.Date === formattedDate && calDay.Type === "пп"
+        );
+  
+        // Подсчитываем количество смен каждого типа для данного дня
+        const countsForDay: { [key: number]: number } = {};
+        shiftTypes.forEach((st) => {
+          countsForDay[st.ID] = 0;
         });
-      });
-
-      return {
-        headerName: `${format(day, 'EEEEEE', { locale: ru })}\n${format(day, 'd MMM', { locale: ru })}`,
-        field: `day-${formattedDate}`,
-        width: 150,
-        minWidth: 150,
-        sortable: false,
-        cellRenderer: 'shiftCellRenderer',
-        cellRendererParams: {
-          shiftTypes,
-          handleAddShift,
-          handleUpdateShift,
-          handleDeleteShift,
-        },
-        headerComponent: () => {
-          const isFilterActive = activeFilter?.date === formattedDate;
-          return (
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                px: 1,
-                py: 1.5,
-                borderRight: 1,
-                borderColor: 'divider',
-                backgroundColor: isHoliday
-                  ? 'red'
-                  : isPrevHoliday
-                  ? 'orange'
-                  : 'grey.100',
-                height: 'auto',
-              }}
-            >
-              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                <Typography variant="subtitle2">{format(day, 'EEEEEE', { locale: ru })}</Typography>
-                <Typography variant="body2">{format(day, 'd MMM', { locale: ru })}</Typography>
-                <Typography variant="caption">Норма: {getDayNorm(day)}ч</Typography>
+        timeData.forEach((employee) => {
+          const shifts = employee.shifts[formattedDate] || [];
+          shifts.forEach((shift) => {
+            if (countsForDay[shift.ShiftTypeId] !== undefined) {
+              countsForDay[shift.ShiftTypeId]++;
+            }
+          });
+        });
+  
+        return {
+          headerName: `${format(day, "EEEEEE", { locale: ru })}\n${format(
+            day,
+            "d MMM",
+            { locale: ru }
+          )}`,
+          field: `day-${formattedDate}`,
+          width: 150,
+          minWidth: 150,
+          sortable: false,
+          cellRenderer: "shiftCellRenderer",
+          cellRendererParams: {
+            shiftTypes,
+            handleAddShift,
+            handleUpdateShift,
+            handleDeleteShift,
+          },
+          headerComponent: () => {
+            const isFilterActive = activeFilter?.date === formattedDate;
+            return (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "stretch",
+                  px: 0,
+                  py: 1,
+                  //borderRight: 1,
+                  borderColor: "divider",
+                  backgroundColor: isHoliday ? "rgba(255, 0, 0, 0.3)" : isPrevHoliday ? "orange" : undefined,
+                  //color: isHoliday ? "white" : undefined,
+                  height: "100%",
+                }}
+              >
+                {/* Левая колонка: день недели, дата и норма часов */}
+                <Box
+                  sx={{
+                    flexBasis: "40%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    pl: 1,
+                  }}
+                >
+                  <Typography variant="subtitle2">
+                    {format(day, "EEEEEE", { locale: ru })}
+                  </Typography>
+                  <Typography variant="body2">
+                    {format(day, "d MMM", { locale: ru })}
+                  </Typography>
+                  <Typography variant="caption">
+                    НРВ: {getDayNorm(day)}ч
+                  </Typography>
+                </Box>
+                {/* Правая колонка: кнопки типов смен с вертикальной прокруткой */}
+                <Box
+                  sx={{
+                    flexBasis: "60%",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-end",
+                    //maxHeight: 80,
+                    overflowY: "auto",
+                    pr: 1,
+                  }}
+                >
+                  
+                  {shiftTypes
+                    .filter((type) => countsForDay[type.ID] > 0)
+                    .map((type) => {
+                      const isActive =
+                        isFilterActive && activeFilter?.shiftTypeId === type.ID;
+                      return (
+                        <Button
+                          key={type.ID}
+                          variant="text"
+                          size="small"
+                          sx={{
+                            m: 0.25,
+                            backgroundColor: type.BackgroundColor,
+                            color: type.TextColor,
+                            ...(isActive && { border: "2px solid blue" }),
+                            fontSize: "0.7rem",
+                            textTransform: "none",
+                          }}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            if (isActive) {
+                              // Сброс фильтра
+                              setActiveFilter(null);
+                            } else {
+                              // Установка фильтра
+                              setActiveFilter({
+                                date: formattedDate,
+                                shiftTypeId: type.ID,
+                              });
+                            }
+                          }}
+                        >
+                          {type.Name}: {countsForDay[type.ID]}
+                        </Button>
+                      );
+                    })}
+                </Box>
               </Box>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', mt: 1 }}>
-                {shiftTypes
-                  .filter((type) => countsForDay[type.ID] > 0)
-                  .map((type) => {
-                    const isActive = isFilterActive && activeFilter?.shiftTypeId === type.ID;
-                    return (
-                      <Button
-                        key={type.ID}
-                        variant="text"
-                        size="small"
-                        sx={{
-                          m: 0.5,
-                          backgroundColor: type.BackgroundColor,
-                          color: type.TextColor,
-                          ...(isActive && { border: '2px solid blue' }),
-                        }}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => {
-                          if (isActive) {
-                            // Сбросить фильтр
-                            setActiveFilter(null);
-                          } else {
-                            // Установить фильтр
-                            setActiveFilter({
-                              date: formattedDate,
-                              shiftTypeId: type.ID,
-                            });
-                          }
-                        }}
-                      >
-                        {type.Name}: {countsForDay[type.ID]}
-                      </Button>
-                    );
-                  })}
-              </Box>
-            </Box>
-          );
-        },
-      };
-    })
-  , [days, shiftTypes, timeData, activeFilter]);
+            );
+          },
+        };
+      }),
+    [days, shiftTypes, timeData, activeFilter]
+  );
+  
 
   const allColumns: ColDef[] = useMemo(
     () => [...fixedColumns, ...dynamicColumns],
@@ -819,7 +904,7 @@ const handleDeleteShift = async (
       filter: false,
     },
     rowHeight: 80,
-    headerHeight: 100,
+    headerHeight: 120,
     components: {
       // Рендер ячейки сотрудника (левый столбец)
       employeeCellRenderer: (params: ICellRendererParams) => {
@@ -827,53 +912,73 @@ const handleDeleteShift = async (
         const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
         const employee = params.data as TimeSheetEntry;
         if (!employee) return null;
-
+      
         const handleMenuOpen = (e: React.MouseEvent<HTMLButtonElement>) => {
           e.stopPropagation();
           setMenuAnchorEl(e.currentTarget);
         };
+      
         const handleMenuClose = () => setMenuAnchorEl(null);
-
+      
         return (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Box>
-                <Typography variant="subtitle1">{employee.Title}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {employee.JobTitle}
-                </Typography>
-              </Box>
-              <Box>
-                <Button
-                  onClick={handleMenuOpen}
-                  variant="text"
-                  sx={{ minWidth: 'auto' }}
-                >
-                  <Settings style={{ height: 16, width: 16 }} />
-                </Button>
-                <Menu anchorEl={menuAnchorEl} open={Boolean(menuAnchorEl)} onClose={handleMenuClose}>
-                  <MenuItem
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setDialogOpen(true);
-                      handleMenuClose();
-                    }}
-                  >
-                    <Pencil style={{ marginRight: 8, height: 16, width: 16 }} />
-                    Изменить
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      params.context.handleDeleteEmployee(employee.ID);
-                      handleMenuClose();
-                    }}
-                  >
-                    <Trash2 style={{ marginRight: 8, height: 16, width: 16 }} />
-                    Удалить
-                  </MenuItem>
-                </Menu>
-              </Box>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              position: 'relative',
+              paddingLeft: '30px', // резервируем место для иконки
+              // При наведении делаем иконку видимой
+              '&:hover .settingsButton': { opacity: 1 },
+            }}
+          >
+            {/* Кнопка с иконкой (шестерёнкой) – скрыта по умолчанию */}
+            <Button
+              className="settingsButton"
+              onClick={handleMenuOpen}
+              variant="text"
+              sx={{
+                opacity: 0,
+                transition: 'opacity 0.3s',
+                position: 'absolute',
+                left: 0,
+                minWidth: 'auto',
+                padding: 0,
+              }}
+            >
+              <ManageAccountsIcon style={{ height: 24, width: 24 }} />
+            </Button>
+      
+            {/* Информация о сотруднике */}
+            <Box>
+              <Typography variant="subtitle1">{employee.Title}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {employee.JobTitle}
+              </Typography>
             </Box>
+      
+            <Menu anchorEl={menuAnchorEl} open={Boolean(menuAnchorEl)} onClose={handleMenuClose}>
+              <MenuItem
+                onClick={(e) => {
+                  e.preventDefault();
+                  setDialogOpen(true);
+                  handleMenuClose();
+                }}
+                sx={{ color: "#267db1" }}>
+               <EditIcon fontSize="small" sx={{ mr: 1 }} />
+               Изменить
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  params.context.handleDeleteEmployee(employee.ID);
+                  handleMenuClose();
+                }}
+                sx={{ color: "error.main" }}>
+                     <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+                     Удалить
+              </MenuItem>
+            </Menu>
+      
             <EmployeeDialog
               open={dialogOpen}
               onOpenChange={setDialogOpen}
@@ -923,7 +1028,7 @@ const handleDeleteShift = async (
       <CardHeader
         title={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Clock style={{ height: 24, width: 24 }} />
+            <QueryBuilderIcon style={{ height: 24, width: 24 }} />
             <Typography variant="h6">График работы</Typography>
           </Box>
         }
@@ -932,14 +1037,14 @@ const handleDeleteShift = async (
             <EmployeeDialog
               onSave={handleAddEmployee}
               trigger={
-                <Button variant="outlined" startIcon={<UserPlus style={{ height: 16, width: 16 }} />}>
+                <Button variant="outlined" startIcon={<PersonAddAltIcon style={{ height: 16, width: 16 }} />}>
                   Добавить сотрудника
                 </Button>
               }
             />
             <Button
               variant="outlined"
-              startIcon={<Settings style={{ height: 16, width: 16 }} />}
+              startIcon={<SettingsIcon style={{ height: 16, width: 16 }} />}
               onClick={handleTopMenuOpen}
             >
               Управление чередованием
@@ -951,7 +1056,7 @@ const handleDeleteShift = async (
                   handleTopMenuClose();
                 }}
               >
-                <Plus style={{ height: 16, width: 16, marginRight: 4 }} />
+                <AddIcon style={{ height: 16, width: 16, marginRight: 4 }} />
                 Создать чередование
               </MenuItem>
               <MenuItem
@@ -960,7 +1065,7 @@ const handleDeleteShift = async (
                   handleTopMenuClose();
                 }}
               >
-                <Settings style={{ height: 16, width: 16, marginRight: 4 }} />
+                <SettingsIcon style={{ height: 16, width: 16, marginRight: 4 }} />
                 Применить чередование
               </MenuItem>
             </Menu>
@@ -970,7 +1075,7 @@ const handleDeleteShift = async (
               onUpdate={handleUpdateShiftType}
               onDelete={handleDeleteShiftType}
               trigger={
-                <Button variant="outlined" startIcon={<Settings style={{ height: 16, width: 16 }} />}>
+                <Button variant="outlined" startIcon={<SettingsIcon style={{ height: 16, width: 16 }} />}>
                   Управление типами смен
                 </Button>
               }
@@ -991,13 +1096,13 @@ const handleDeleteShift = async (
               </FormControl>
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                 <Button variant="outlined" onClick={handlePrevPeriod}>
-                  <ChevronLeft style={{ height: 16, width: 16 }} />
+                  <ArrowBackIosIcon style={{ height: 24, width: 24 }} />
                 </Button>
                 <Typography variant="subtitle1" sx={{ px: 1, fontWeight: 'medium' }}>
                   {formatPeriodLabel()}
                 </Typography>
                 <Button variant="outlined" onClick={handleNextPeriod}>
-                  <ChevronRight style={{ height: 16, width: 16 }} />
+                  <ArrowForwardIosIcon style={{ height: 24 , width: 24 }} />
                 </Button>
               </Box>
             </Box>

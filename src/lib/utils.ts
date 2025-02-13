@@ -142,14 +142,8 @@ export function calculateShiftHours(
   startTime: string,
   endTime: string,
   breakStart: string,
-  breakEnd: string,
-  requiredStartEndTime: boolean = true
+  breakEnd: string
 ): number {
-  // Если для данного типа смен время начала/окончания не требуется, не рассчитываем часы
-  if (!requiredStartEndTime) {
-    return 0;
-  }
-
   const baseDate = '2000-01-01'; // Базовая дата для расчётов
 
   let start = parse(`${baseDate} ${startTime}`, 'yyyy-MM-dd HH:mm', new Date());
@@ -171,6 +165,7 @@ export function calculateShiftHours(
   }
 
   let breakMinutes = differenceInMinutes(breakEndTime, breakStartTime);
+
   // Убедимся, что перерыв не превышает общую длительность смены
   const shiftDuration = differenceInMinutes(end, start);
   breakMinutes = Math.min(breakMinutes, shiftDuration);

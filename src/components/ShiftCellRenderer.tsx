@@ -6,6 +6,7 @@ import AddIcon from "@mui/icons-material/Add";
 import { Shift, ShiftTypeDefinition } from "../types";
 import { ShiftCard } from "./ShiftCard";
 import { ShiftDialog } from "./ShiftDialog";
+import { Scrollbars } from "react-custom-scrollbars-2";
 
 interface ExtraCellRendererParams {
   shiftTypes: ShiftTypeDefinition[];
@@ -85,34 +86,57 @@ export function ShiftCellRenderer(
           }}
         />
       </Box>
-
-      {/* Правая часть: блок "Доля" и список смен */}
-      <Box
-        sx={{
-          width: "83.33%",
-          height: "100%",
-          overflowY: "auto",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        {showFractionBlock && (
-          <Typography variant="caption" sx={{ color: "gray", fontWeight: 600, mb: 1 }}>
-            Доля: {Math.round(fraction * 100)}%
-          </Typography>
-        )}
-        {shifts.map((shift: Shift) => (
-          <ShiftCard
-            key={shift.ID}
-            shift={shift}
-            shiftTypes={shiftTypes}
-            employeeId={employeeId}
-            date={date}
-            onUpdateShift={(data) => handleUpdateShift(employeeId, date, shift.ID, data)}
-            onDeleteShift={(shiftId) => handleDeleteShift(employeeId, date, Number(shiftId))}
+   {/* Правая часть: блок "Доля" и список смен с кастомным скроллом */}
+   <Scrollbars
+        style={{ width: "83.33%", height: "100%" }}
+        autoHide
+        autoHideTimeout={1000}
+        autoHideDuration={200}
+        renderThumbVertical={({ style, ...props }) => (
+          <div
+            {...props}
+            style={{
+              ...style,
+              backgroundColor: "rgba(0, 0, 0, 0.4)",
+              borderRadius: 4,
+              width: 4,
+              marginRight: 2,
+            }}
           />
-        ))}
-      </Box>
+        )}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          {showFractionBlock && (
+            <Typography
+              variant="caption"
+              sx={{ color: "gray", fontWeight: 600, mb: 1 }}
+            >
+              Доля: {Math.round(fraction * 100)}%
+            </Typography>
+          )}
+          {shifts.map((shift: Shift) => (
+            <ShiftCard
+              key={shift.ID}
+              shift={shift}
+              shiftTypes={shiftTypes}
+              employeeId={employeeId}
+              date={date}
+              onUpdateShift={(data) =>
+                handleUpdateShift(employeeId, date, shift.ID, data)
+              }
+              onDeleteShift={(shiftId) =>
+                handleDeleteShift(employeeId, date, Number(shiftId))
+              }
+            />
+          ))}
+        </Box>
+      </Scrollbars>
     </Box>
   );
 }
