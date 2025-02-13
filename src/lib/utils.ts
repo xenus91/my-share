@@ -142,8 +142,14 @@ export function calculateShiftHours(
   startTime: string,
   endTime: string,
   breakStart: string,
-  breakEnd: string
+  breakEnd: string,
+  requiredStartEndTime: boolean = true
 ): number {
+  if (!requiredStartEndTime) {
+    return 0;
+  }
+
+
   const baseDate = '2000-01-01'; // Базовая дата для расчётов
 
   let start = parse(`${baseDate} ${startTime}`, 'yyyy-MM-dd HH:mm', new Date());

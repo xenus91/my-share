@@ -62,6 +62,18 @@ export function ShiftDialog({
   // Отправка формы
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+     // Находим выбранный тип смены
+  const selectedType = shiftTypes.find(
+    (type) => type.ID === formData.shiftTypeId
+  );
+  // Получаем значение RequiredStartEndTime из выбранного типа,
+  // если оно не задано – по умолчанию true.
+  let requiredStartEndTime = selectedType?.RequiredStartEndTime ?? true;
+  // Если тип смены имеет CivilLawContract = true, принудительно устанавливаем флаг в true,
+  // чтобы часы рассчитывались.
+  if (selectedType?.CivilLawContract) {
+    requiredStartEndTime = true;
+  }
 
     // Считаем продолжительность смены
     const hours = calculateShiftHours(
