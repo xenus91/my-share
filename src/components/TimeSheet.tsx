@@ -17,17 +17,21 @@ import {
   FormControl,
   InputLabel,
   Select,
+  IconButton,            // // menu: импортируем IconButton
+  Drawer,                // // menu: импортируем Drawer
 } from '@mui/material';
 import EditIcon from "@mui/icons-material/Edit";
 // BEGIN BULK MODE: Импорт иконок для bulkMode
 import LibraryAddCheckOutlinedIcon from '@mui/icons-material/LibraryAddCheckOutlined';
 import LibraryAddCheckIcon from '@mui/icons-material/LibraryAddCheck';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 // END BULK MODE
 import DeleteIcon from "@mui/icons-material/Delete";
 import SettingsIcon from '@mui/icons-material/Settings';
 import AddIcon from '@mui/icons-material/Add';
 import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
-import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
+import MenuIcon from '@mui/icons-material/Menu';
+//import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
@@ -63,6 +67,7 @@ import { createShiftType, deleteShiftType, getShiftTypes, updateShiftType } from
 import { createShift, deleteShift, getShifts, updateShift } from '../services/shiftService';
 import { createShiftPattern, deleteShiftPattern, getShiftPatterns, updateShiftPattern } from '../services/shiftPatternService';
 import { ShiftDialog } from './ShiftDialog';
+import EmployeeHeaderRenderer  from './EmployeeHeaderRenderer';
 
 type ViewPeriod = 'week' | 'month' | 'year';
 
@@ -96,6 +101,12 @@ export default function TimeSheet() {
   const [bulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
   // END BULK MODE
 
+
+    // menu: состояние бокового меню для управления чередованием
+    const [sideMenuOpen, setSideMenuOpen] = useState(false);
+    const toggleSideMenu = () => {
+      setSideMenuOpen(!sideMenuOpen);
+    };
 
 // Загрузка паттернов смен
   useEffect(() => {
@@ -713,7 +724,7 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
   // ===========================
   const fixedColumns: ColDef[] = useMemo(() => [
     {
-      headerName: 'Сотрудник',
+      headerComponent: EmployeeHeaderRenderer, // Используем наш компонент заголовка
       field: 'Title',
       width: 200,
       pinned: 'left',
@@ -1030,6 +1041,7 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
       shiftCellRenderer: ShiftCellRenderer,
     },
     context: {
+      handleAddEmployee,
       handleUpdateEmployee,
       handleDeleteEmployee,
       handleAddShift,
@@ -1042,7 +1054,7 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
       // END BULK MODE
     },
     suppressDragLeaveHidesColumns: true,
-  }), [handleUpdateEmployee, handleDeleteEmployee, handleAddShift, handleUpdateShift, handleDeleteShift, bulkMode, bulkSelectedShifts]);
+  }), [handleAddEmployee, handleUpdateEmployee, handleDeleteEmployee, handleAddShift, handleUpdateShift, handleDeleteShift, bulkMode, bulkSelectedShifts]);
 
   useEffect(() => {
     if (gridRef.current?.api) {
@@ -1056,13 +1068,13 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
   }, [viewPeriod, currentDate]);
 
   // Меню в заголовке
-  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  /*const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const handleTopMenuOpen = (e: React.MouseEvent<HTMLElement>) => {
     setMenuAnchorEl(e.currentTarget);
   };
   const handleTopMenuClose = () => {
     setMenuAnchorEl(null);
-  };
+  };*/
 // BEGIN BULK MODE: Обработчики для режима массовых операций
 const toggleBulkMode = () => {
   setBulkMode(!bulkMode);
@@ -1092,105 +1104,115 @@ const handleBulkEdit = () => {
       <CardHeader
         title={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {/* menu: Добавляем кнопку открытия бокового меню */}
+            <IconButton onClick={toggleSideMenu} sx={{ p: 0 }}>
+              <MenuIcon />
+            </IconButton>
             <QueryBuilderIcon style={{ height: 24, width: 24 }} />
             <Typography variant="h6">График работы</Typography>
           </Box>
         }
         action={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <EmployeeDialog
-              onSave={handleAddEmployee}
-              trigger={
-                <Button variant="outlined" startIcon={<PersonAddAltIcon style={{ height: 16, width: 16 }} />}>
-                  Добавить сотрудника
-                </Button>
-              }
-            />
+
+           {/* BEGIN BULK MODE: Кнопка bulkMode */}
+           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Button
               variant="outlined"
-              startIcon={<SettingsIcon style={{ height: 16, width: 16 }} />}
-              onClick={handleTopMenuOpen}
+              onClick={toggleBulkMode}
+              startIcon={bulkMode ? <LibraryAddCheckIcon /> : <LibraryAddCheckOutlinedIcon />}
             >
-              Управление чередованием
+              Bulk Mode
             </Button>
-            <Menu anchorEl={menuAnchorEl} open={Boolean(menuAnchorEl)} onClose={handleTopMenuClose}>
-              <MenuItem
-                onClick={() => {
-                  setIsCreatePatternDialogOpen(true);
-                  handleTopMenuClose();
-                }}
-              >
-                <AddIcon style={{ height: 16, width: 16, marginRight: 4 }} />
-                Создать чередование
-              </MenuItem>
-              <MenuItem
-                onClick={() => {
-                  setIsAssignDialogOpen(true);
-                  handleTopMenuClose();
-                }}
-              >
-                <SettingsIcon style={{ height: 16, width: 16, marginRight: 4 }} />
-                Применить чередование
-              </MenuItem>
-            </Menu>
-            <ShiftTypeDialog
-              shiftTypes={shiftTypes}
-              onSave={handleAddShiftType}
-              onUpdate={handleUpdateShiftType}
-              onDelete={handleDeleteShiftType}
-              trigger={
-                <Button variant="outlined" startIcon={<SettingsIcon style={{ height: 16, width: 16 }} />}>
-                  Управление типами смен
-                </Button>
-              }
-            />
-             {/* BEGIN BULK MODE: Кнопка переключения режима bulkMode и дополнительные кнопки */}
-             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Button
-                variant="outlined"
-                onClick={toggleBulkMode}
-                startIcon={bulkMode ? <LibraryAddCheckIcon /> : <LibraryAddCheckOutlinedIcon />}
-              >
-                {/* Текст можно убрать, если нужен только значок */}
-                Bulk Mode
-              </Button>
-              {bulkMode && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Button variant="outlined" onClick={handleBulkEdit} startIcon={<EditIcon />} />
-                  <Button variant="outlined" onClick={handleBulkDelete} startIcon={<DeleteIcon />} />
-                </Box>
-              )}
-            </Box>
-            {/* END BULK MODE */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <FormControl size="small" sx={{ minWidth: 180 }}>
-                <InputLabel id="view-period-label">Период</InputLabel>
-                <Select
-                  labelId="view-period-label"
-                  value={viewPeriod}
-                  label="Период"
-                  onChange={(e) => setViewPeriod(e.target.value as ViewPeriod)}
-                >
-                  <MenuItem value="week">Неделя</MenuItem>
-                  <MenuItem value="month">Месяц</MenuItem>
-                  <MenuItem value="year">Год</MenuItem>
-                </Select>
-              </FormControl>
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <Button variant="outlined" onClick={handlePrevPeriod}>
-                  <ArrowBackIosIcon style={{ height: 24, width: 24 }} />
-                </Button>
-                <Typography variant="subtitle1" sx={{ px: 1, fontWeight: 'medium' }}>
-                  {formatPeriodLabel()}
-                </Typography>
-                <Button variant="outlined" onClick={handleNextPeriod}>
-                  <ArrowForwardIosIcon style={{ height: 24 , width: 24 }} />
-                </Button>
+            {bulkMode && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Button variant="outlined" onClick={handleBulkEdit} startIcon={<EditIcon />} />
+                <Button variant="outlined" onClick={handleBulkDelete} startIcon={<DeleteIcon />} />
               </Box>
+            )}
+           </Box>
+           {/* END BULK MODE */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FormControl size="small" sx={{ minWidth: 180 }}>
+              <InputLabel id="view-period-label">Период</InputLabel>
+              <Select
+                labelId="view-period-label"
+                value={viewPeriod}
+                label="Период"
+                onChange={(e) => setViewPeriod(e.target.value as ViewPeriod)}
+              >
+                <MenuItem value="week">Неделя</MenuItem>
+                <MenuItem value="month">Месяц</MenuItem>
+                <MenuItem value="year">Год</MenuItem>
+              </Select>
+            </FormControl>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <Button variant="outlined" onClick={handlePrevPeriod}>
+                <ArrowBackIosIcon style={{ height: 24, width: 24 }} />
+              </Button>
+              <Typography variant="subtitle1" sx={{ px: 1, fontWeight: 'medium' }}>
+                {formatPeriodLabel()}
+              </Typography>
+              <Button variant="outlined" onClick={handleNextPeriod}>
+                <ArrowForwardIosIcon style={{ height: 24, width: 24 }} />
+              </Button>
             </Box>
           </Box>
+        </Box>
         }
       />
+            {/* menu: Боковое меню (Drawer) для управления чередованием */}
+            <Drawer anchor="left" open={sideMenuOpen} onClose={() => setSideMenuOpen(false)}>
+  <Box sx={{ 
+    width: 250, 
+    p: 2,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 1 // Добавляет равные промежутки между всеми детьми
+  }}>
+    <Button
+      fullWidth
+      variant="outlined"
+      startIcon={<AddIcon style={{ height: 16, width: 16 }} />}
+      onClick={() => { 
+        setIsCreatePatternDialogOpen(true); 
+        setSideMenuOpen(false); 
+      }}
+    >
+      Создать чередование
+    </Button>
+
+    <Button
+      fullWidth
+      variant="outlined"
+
+      startIcon={<EventAvailableIcon style={{ height: 16, width: 16 }} />}
+      onClick={() => { 
+        setIsAssignDialogOpen(true); 
+        setSideMenuOpen(false); 
+      }}
+    >
+      Применить чередование
+    </Button>
+    
+    <ShiftTypeDialog
+      shiftTypes={shiftTypes}
+      onSave={handleAddShiftType}
+      onUpdate={handleUpdateShiftType}
+      onDelete={handleDeleteShiftType}
+      trigger={
+        <Button 
+          fullWidth 
+          variant="outlined"
+          startIcon={<SettingsIcon style={{ height: 16, width: 16 }} />}
+          sx={{ mt: 0 }} // Выравниваем с остальными кнопками
+        >
+          Управление типами смен
+        </Button>
+      }
+    />
+  </Box>
+</Drawer>
       <CardContent>
         <Box sx={{ width: '100%', height: '85vh', overflow: 'auto' }}>
           <AgGridReact

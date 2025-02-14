@@ -6,7 +6,7 @@ import {
   MenuItem,
   Typography,
   Box,
-  Tooltip, // <-- Новый импорт Tooltip из MUI
+  Tooltip, // Новый импорт Tooltip из MUI
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -103,8 +103,8 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({
 
   return (
     <>
-      {/* Оборачиваем кнопку в Tooltip */}
-      <Tooltip title={tooltipContent} arrow>
+      {/* Оборачиваем кнопку в Tooltip с задержкой 2000 мс */}
+      <Tooltip title={tooltipContent} arrow enterDelay={2000}>
         <Button
           onClick={buttonOnClick} // BEGIN BULK MODE: Используем переопределённый обработчик при bulkMode
           fullWidth
