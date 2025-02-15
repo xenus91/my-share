@@ -392,38 +392,42 @@ export async function ensureShiftsListExists(): Promise<void> {
       const digest = await getRequestDigest();
 
       // 1. Общие поля
-      const commonFields = [
-        { Title: "Date", FieldTypeKind: 4 },         // DateTime
-        { Title: "StartTime", FieldTypeKind: 2 },      // Text
-        { Title: "EndTime", FieldTypeKind: 2 },        // Text
-        { Title: "BreakStart", FieldTypeKind: 2 },     // Text
-        { Title: "BreakEnd", FieldTypeKind: 2 },       // Text
-        { Title: "Hours", FieldTypeKind: 9 },          // Number
-        { Title: "IsNightShift", FieldTypeKind: 8 },   // Boolean
-      ];
+     // 1. Общие поля, включая новое поле MarkedForDeletion (без свойства DefaultValue)
+const commonFields = [
+  { Title: "Date", FieldTypeKind: 4 },         // DateTime
+  { Title: "StartTime", FieldTypeKind: 2 },      // Text
+  { Title: "EndTime", FieldTypeKind: 2 },        // Text
+  { Title: "BreakStart", FieldTypeKind: 2 },     // Text
+  { Title: "BreakEnd", FieldTypeKind: 2 },       // Text
+  { Title: "Hours", FieldTypeKind: 9 },          // Number
+  { Title: "IsNightShift", FieldTypeKind: 8 },   // Boolean
+  { Title: "MarkedForDeletion", FieldTypeKind: 8 }, // Boolean, без defaultValue
+];
 
-      const fieldsUrl = `/web/lists/GetByTitle('Shifts')/fields`;
-      for (const field of commonFields) {
-        if (!existingFields.includes(field.Title)) {
-          await apiClient.post(
-            fieldsUrl,
-            {
-              __metadata: { type: "SP.Field" },
-              Title: field.Title,
-              FieldTypeKind: field.FieldTypeKind,
-            },
-            {
-              headers: {
-                Accept: "application/json;odata=verbose",
-                "Content-Type": "application/json;odata=verbose",
-                "X-Requested-With": "XMLHttpRequest",
-                "X-RequestDigest": digest,
-              },
-            }
-          );
-          console.log(`✅ Поле '${field.Title}' добавлено.`);
-        }
+const fieldsUrl = `/web/lists/GetByTitle('Shifts')/fields`;
+
+// Сравниваем только названия полей (без учета регистра)
+for (const field of commonFields) {
+  if (!existingFields.some(existingTitle => existingTitle.toLowerCase() === field.Title.toLowerCase())) {
+    await apiClient.post(
+      fieldsUrl,
+      {
+        __metadata: { type: "SP.Field" },
+        Title: field.Title,
+        FieldTypeKind: field.FieldTypeKind,
+      },
+      {
+        headers: {
+          Accept: "application/json;odata=verbose",
+          "Content-Type": "application/json;odata=verbose",
+          "X-Requested-With": "XMLHttpRequest",
+          "X-RequestDigest": digest,
+        },
       }
+    );
+    console.log(`✅ Поле '${field.Title}' добавлено.`);
+  }
+}
 
       // 2. Lookup-поле для сотрудника (Employee)
       if (!existingFields.includes("Employee")) {

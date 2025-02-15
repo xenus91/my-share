@@ -1,4 +1,5 @@
 // src/services/shiftService.ts
+//import { it } from 'date-fns/locale';
 import apiClient from '../api';
 import { Shift } from '../types';
 import { getRequestDigest } from './contextService';
@@ -19,6 +20,7 @@ export async function createShift(
       BreakEnd: shift.BreakEnd,
       Hours: shift.Hours,
       IsNightShift: shift.IsNightShift,
+      MarkedForDeletion: false,
     };
 
     const response = await apiClient.post(
@@ -81,6 +83,66 @@ export async function updateShift(
   }
 }
 
+export async function markShiftForDeletion(shiftId: number): Promise<void> {
+  try {
+    const digest = await getRequestDigest();
+    const payload = {
+      __metadata: { type: "SP.Data.ShiftsListItem" },
+      MarkedForDeletion: true,
+    };
+
+    await apiClient.post(
+      `/web/lists/GetByTitle('Shifts')/items(${shiftId})`,
+      payload,
+      {
+        headers: {
+          Accept: "application/json;odata=verbose",
+          "Content-Type": "application/json;odata=verbose",
+          "X-RequestDigest": digest,
+          "IF-MATCH": "*",
+          "X-HTTP-Method": "MERGE",
+        },
+      }
+    );
+
+    console.log("✅ Смена помечена для удаления.");
+  } catch (error) {
+    console.error("❌ Ошибка при пометке смены для удаления:", error);
+    throw error;
+  }
+}
+
+export async function unmarkShiftForDeletion(shiftId: number): Promise<void> {
+  try {
+    const digest = await getRequestDigest();
+    const payload = {
+      __metadata: { type: "SP.Data.ShiftsListItem" },
+      MarkedForDeletion: false,
+    };
+
+    await apiClient.post(
+      `/web/lists/GetByTitle('Shifts')/items(${shiftId})`,
+      payload,
+      {
+        headers: {
+          Accept: "application/json;odata=verbose",
+          "Content-Type": "application/json;odata=verbose",
+          "X-RequestDigest": digest,
+          "IF-MATCH": "*",
+          "X-HTTP-Method": "MERGE",
+        },
+      }
+    );
+
+    console.log("✅ Пометка удаления снята.");
+  } catch (error) {
+    console.error("❌ Ошибка при снятии пометки удаления:", error);
+    throw error;
+  }
+}
+
+
+
 
 export async function deleteShift(shiftId: number): Promise<void> {
   try {
@@ -108,7 +170,7 @@ export async function deleteShift(shiftId: number): Promise<void> {
 export async function getShifts(): Promise<Shift[]> {
   try {
     const response = await apiClient.get(
-      "/web/lists/GetByTitle('Shifts')/items?$select=ID,EmployeeId,Date,ShiftTypeId,StartTime,EndTime,BreakStart,BreakEnd,Hours,IsNightShift,Editor/Title&$expand=Editor",
+      "/web/lists/GetByTitle('Shifts')/items?$select=ID,EmployeeId,Date,ShiftTypeId,StartTime,EndTime,BreakStart,BreakEnd,Hours,IsNightShift,MarkedForDeletion,Editor/Title&$expand=Editor",
       {
         headers: {
           Accept: "application/json;odata=verbose",
@@ -127,7 +189,8 @@ export async function getShifts(): Promise<Shift[]> {
       BreakEnd: item.BreakEnd,
       Hours: item.Hours,
       IsNightShift: item.IsNightShift,
-      ChangeAuthor: item.Editor ? item.Editor.Title : "Неизвестно" // получаем имя автора из Editor.Title
+      ChangeAuthor: item.Editor ? item.Editor.Title : "Неизвестно", // получаем имя автора из Editor.Title
+      MarkedForDeletion: item.MarkedForDeletion
     }));
 
     console.log("✅ Получены смены:", items);

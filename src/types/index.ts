@@ -55,6 +55,7 @@ export interface Shift {
   Hours: number;           // количество рабочих часов
   IsNightShift: boolean;   // является ли смена ночной
   ChangeAuthor?: string;  // новое поле для имени автора изменений
+  MarkedForDeletion?: boolean
 }
 
 // Интерфейс для записи времени (если используется отдельный список)
