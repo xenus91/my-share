@@ -108,7 +108,7 @@ export async function deleteShift(shiftId: number): Promise<void> {
 export async function getShifts(): Promise<Shift[]> {
   try {
     const response = await apiClient.get(
-      "/web/lists/GetByTitle('Shifts')/items",
+      "/web/lists/GetByTitle('Shifts')/items?$select=ID,EmployeeId,Date,ShiftTypeId,StartTime,EndTime,BreakStart,BreakEnd,Hours,IsNightShift,Editor/Title&$expand=Editor",
       {
         headers: {
           Accept: "application/json;odata=verbose",
@@ -127,6 +127,7 @@ export async function getShifts(): Promise<Shift[]> {
       BreakEnd: item.BreakEnd,
       Hours: item.Hours,
       IsNightShift: item.IsNightShift,
+      ChangeAuthor: item.Editor ? item.Editor.Title : "Неизвестно" // получаем имя автора из Editor.Title
     }));
 
     console.log("✅ Получены смены:", items);
@@ -136,3 +137,4 @@ export async function getShifts(): Promise<Shift[]> {
     throw error;
   }
 }
+

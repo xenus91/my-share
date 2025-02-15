@@ -97,6 +97,9 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({
       <Typography variant="caption" display="block">
         Окончание перерыва: {shift.BreakEnd}
       </Typography>
+      <Typography variant="caption" display="block">
+        Автор изменений: {shift.ChangeAuthor}
+      </Typography>
     </Box>
   );
   // END TOOLTIP
