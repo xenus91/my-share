@@ -118,18 +118,22 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({
   // BEGIN TOOLTIP: Формирование содержимого "облачка" с информацией о смене
   const tooltipContent = (
     <Box>
-      <Typography variant="caption" display="block">
-        Начало смены: {shift.StartTime}
-      </Typography>
-      <Typography variant="caption" display="block">
-        Окончание смены: {shift.EndTime}
-      </Typography>
-      <Typography variant="caption" display="block">
-        Начало перерыва: {shift.BreakStart}
-      </Typography>
-      <Typography variant="caption" display="block">
-        Окончание перерыва: {shift.BreakEnd}
-      </Typography>
+       {shiftType.RequiredStartEndTime && (
+      <>
+        <Typography variant="caption" display="block">
+          Начало смены: {shift.StartTime}
+        </Typography>
+        <Typography variant="caption" display="block">
+          Окончание смены: {shift.EndTime}
+        </Typography>
+        <Typography variant="caption" display="block">
+          Начало перерыва: {shift.BreakStart}
+        </Typography>
+        <Typography variant="caption" display="block">
+          Окончание перерыва: {shift.BreakEnd}
+        </Typography>
+      </>
+    )}
       <Typography variant="caption" display="block">
         Автор изменений: {shift.ChangeAuthor}
       </Typography>

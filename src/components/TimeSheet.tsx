@@ -23,6 +23,7 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 // BEGIN BULK MODE: Импорт иконок для bulkMode
 import LibraryAddCheckOutlinedIcon from '@mui/icons-material/LibraryAddCheckOutlined';
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import LibraryAddCheckIcon from '@mui/icons-material/LibraryAddCheck';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 // END BULK MODE
@@ -64,7 +65,7 @@ import { EmployeeDialog } from './EmployeeDialog';
 import { ShiftTypeDialog } from './ShiftTypeDialog';
 import { getEmployee, deleteEmployee, getWorkloadPeriods } from "../services/userService";
 import { createShiftType, deleteShiftType, getShiftTypes, updateShiftType } from "../services/shiftTypeService"; 
-import { createShift, deleteShift, getShifts, updateShift } from '../services/shiftService';
+import { createShift, deleteShift, getShiftById, getShifts, updateShift } from '../services/shiftService';
 import { createShiftPattern, deleteShiftPattern, getShiftPatterns, updateShiftPattern } from '../services/shiftPatternService';
 import { ShiftDialog } from './ShiftDialog';
 import EmployeeHeaderRenderer  from './EmployeeHeaderRenderer';
@@ -553,26 +554,28 @@ const handleUpdateShift = async (
 ): Promise<void> => {
   try {
     await updateShift(shiftId, shiftData);
-    setTimeData((prevData) =>
-      prevData.map((employee) => {
-        if (employee.ID === employeeId) {
-          return {
-            ...employee,
-            shifts: {
-              ...employee.shifts,
-              [date]: employee.shifts[date].map((shift) =>
-                shift.ID === shiftId ? { ...shift, ...shiftData } : shift
-              ),
-            },
-          };
-        }
-        return employee;
-      })
-    );
-  } catch (error) {
-    console.error("Ошибка при обновлении смены:", error);
-  }
-};
+     // Загружаем обновленные данные после изменения
+     const updatedShift = await getShiftById(shiftId);
+
+     setTimeData((prevData) =>
+       prevData.map((employee) =>
+         employee.ID === employeeId
+           ? {
+               ...employee,
+               shifts: {
+                 ...employee.shifts,
+                 [date]: employee.shifts[date].map((shift) =>
+                   shift.ID === shiftId ? updatedShift : shift
+                 ),
+               },
+             }
+           : employee
+       )
+     );
+   } catch (error) {
+     console.error("❌ Ошибка при обновлении смены:", error);
+   }
+ };
 
 // Удалить смену
 const handleDeleteShift = async (
@@ -645,43 +648,86 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
           const dateStr = format(day, "yyyy-MM-dd");
           const shifts = employee.shifts[dateStr] || [];
           return sum + shifts.reduce((s: number, shift: Shift) => {
+            if (shift.MarkedForDeletion) return s; // Пропускаем удаленные смены
             const shiftType = shiftTypes.find(
               (t) => t.ID === Number(shift.ShiftTypeId)
             );
-            // Если CivilLawContract === false (или falsy), добавляем часы
             return shiftType && !shiftType.CivilLawContract ? s + shift.Hours : s;
           }, 0);
         }, 0);
-  
+        
         const totalHoursCLW = days.reduce((sum: number, day: Date) => {
           const dateStr = format(day, "yyyy-MM-dd");
           const shifts = employee.shifts[dateStr] || [];
           return sum + shifts.reduce((s: number, shift: Shift) => {
+            if (shift.MarkedForDeletion) return s; // Пропускаем удаленные смены
             const shiftType = shiftTypes.find(
               (t) => t.ID === Number(shift.ShiftTypeId)
             );
-            const isCLW = shiftType?.CivilLawContract ?? false;
-            return isCLW ? s + shift.Hours : s;
+            return shiftType?.CivilLawContract ? s + shift.Hours : s;
           }, 0);
         }, 0);
-  
+        
         const holidayHours = days.reduce((sum: number, day: Date) => {
           const dateStr = format(day, "yyyy-MM-dd");
           const shifts = employee.shifts[dateStr] || [];
-          return sum + shifts.reduce((s: number, shift: Shift) => s + calculateHolidayHours(shift), 0);
+          return sum + shifts.reduce((s: number, shift: Shift) => {
+            if (shift.MarkedForDeletion) return s; // Пропускаем удаленные смены
+            return s + calculateHolidayHours(shift);
+          }, 0);
         }, 0);
+
+        const totalHoursToDelete = days.reduce((sum: number, day: Date) => {
+          const dateStr = format(day, "yyyy-MM-dd");
+          const shifts = employee.shifts[dateStr] || [];
+          return sum + shifts.reduce((s: number, shift: Shift) => {
+            if (!shift.MarkedForDeletion) return s; // Учитываем только помеченные на удаление
+            const shiftType = shiftTypes.find(
+              (t) => t.ID === Number(shift.ShiftTypeId)
+            );
+            return shiftType && !shiftType.CivilLawContract ? s + shift.Hours : s;
+          }, 0);
+        }, 0);
+        
+        const totalHoursCLWToDelete = days.reduce((sum: number, day: Date) => {
+          const dateStr = format(day, "yyyy-MM-dd");
+          const shifts = employee.shifts[dateStr] || [];
+          return sum + shifts.reduce((s: number, shift: Shift) => {
+            if (!shift.MarkedForDeletion) return s; // Учитываем только помеченные на удаление
+            const shiftType = shiftTypes.find(
+              (t) => t.ID === Number(shift.ShiftTypeId)
+            );
+            return shiftType?.CivilLawContract ? s + shift.Hours : s;
+          }, 0);
+        }, 0);
+        
+        const holidayHoursToDelete = days.reduce((sum: number, day: Date) => {
+          const dateStr = format(day, "yyyy-MM-dd");
+          const shifts = employee.shifts[dateStr] || [];
+          return sum + shifts.reduce((s: number, shift: Shift) => {
+            if (!shift.MarkedForDeletion) return s; // Учитываем только помеченные на удаление
+            return s + calculateHolidayHours(shift);
+          }, 0);
+        }, 0);
+        
   
         const normHours = days.reduce((sum: number, day: Date) => {
+          const today = new Date();
+          const endOfCurrentMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        
+          // Если режим "Год" — ограничиваем расчёт текущим месяцем
+          if (viewPeriod === "year" && day > endOfCurrentMonth) return sum;
+        
           let dayNorm = getDayNorm(day);
           const dateStr = format(day, "yyyy-MM-dd");
           const shifts = employee.shifts[dateStr] || [];
           const hasAffectingShift = shifts.some((shift) => {
-            const shiftType = shiftTypes.find(
-              (type) => type.ID === Number(shift.ShiftTypeId)
-            );
+            const shiftType = shiftTypes.find((type) => type.ID === Number(shift.ShiftTypeId));
             return shiftType?.AffectsWorkingNorm;
           });
+        
           if (hasAffectingShift) return sum;
+        
           let fraction = 1;
           const workloadPeriods = employee.workloadPeriods ?? [];
           for (const period of workloadPeriods) {
@@ -692,9 +738,11 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
               fraction = period.Fraction;
             }
           }
+        
           dayNorm *= fraction;
           return sum + dayNorm;
         }, 0);
+        
   
         const row: any = {
           ID: employee.ID,
@@ -707,6 +755,9 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
           totalHours, // Лента (CivilLawContract === false)
           totalHoursCLW, // ГПХ (CivilLawContract === true)
           holidayHours,
+          totalHoursToDelete, // Добавляем
+          totalHoursCLWToDelete, // Добавляем
+          holidayHoursToDelete, // Добавляем
           normHours,
         };
   
@@ -747,26 +798,61 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
         </div>
       ),
       field: "totalHours",
-      width: 150,
+      width: 220,
       pinned: "left",
       sortable: false,
       suppressMovable: true,
-      cellStyle: { textAlign: "right", fontWeight: "bold" },
-      valueGetter: (params: any) => {
-        const totalHours = params.data.totalHours;
-        const totalHoursCLW = params.data.totalHoursCLW;
-        return `${totalHours}ч | ${totalHoursCLW}ч`;
+      cellRenderer: (params: any) => {
+        const { totalHours, totalHoursCLW, totalHoursToDelete, totalHoursCLWToDelete } = params.data;
+  
+        return (
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 6 }}>
+            {/* Основные часы */}
+            <span>
+              {totalHours}ч{" "}
+              {totalHoursToDelete > 0 && (
+                <>
+                  (<VisibilityOffIcon style={{ fontSize: 14, color: "gray", marginRight: 2 }} />
+                  {totalHoursToDelete}ч)
+                </>
+              )}
+            </span>
+            |
+            <span>
+              {totalHoursCLW}ч{" "}
+              {totalHoursCLWToDelete > 0 && (
+                <>
+                  (<VisibilityOffIcon style={{ fontSize: 14, color: "gray", marginRight: 2 }} />
+                  {totalHoursCLWToDelete}ч)
+                </>
+              )}
+            </span>
+          </div>
+        );
       },
     },
     {
-      headerName: 'Праздничные часы',
-      field: 'holidayHours',
-      width: 150,
-      pinned: 'left',
+      headerName: "Праздничные часы",
+      field: "holidayHours",
+      width: 180,
+      pinned: "left",
       sortable: false,
       suppressMovable: true,
-      cellStyle: { textAlign: 'right', fontWeight: 'bold' },
-      valueFormatter: (params: ValueFormatterParams) => `${params.value}ч`,
+      cellRenderer: (params: any) => {
+        const { holidayHours, holidayHoursToDelete } = params.data;
+  
+        return (
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 6 }}>
+            <span>{holidayHours}ч</span>
+            {holidayHoursToDelete > 0 && (
+              <>
+                (<VisibilityOffIcon style={{ fontSize: 14, color: "gray", marginRight: 2 }} />
+                {holidayHoursToDelete}ч)
+              </>
+            )}
+          </div>
+        );
+      },
     },
     {
       headerName: 'Нормо часы',
@@ -1129,7 +1215,7 @@ const handleBulkEdit = () => {
               onClick={toggleBulkMode}
               startIcon={bulkMode ? <LibraryAddCheckIcon /> : <LibraryAddCheckOutlinedIcon />}
             >
-              Bulk Mode
+              Массовое измение
             </Button>
             {bulkMode && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

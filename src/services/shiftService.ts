@@ -51,7 +51,7 @@ export async function updateShift(
 ): Promise<void> {
   try {
     const digest = await getRequestDigest();
-    const payload = {
+    const payload: any = {
       __metadata: { type: "SP.Data.ShiftsListItem" },
       ShiftTypeId: shift.ShiftTypeId,
       StartTime: shift.StartTime,
@@ -61,6 +61,13 @@ export async function updateShift(
       Hours: shift.Hours,
       IsNightShift: shift.IsNightShift,
     };
+
+    // Добавляем MarkedForDeletion, если оно передано
+    if (shift.MarkedForDeletion !== undefined) {
+      payload.MarkedForDeletion = shift.MarkedForDeletion;
+    }
+
+    console.log("📌 Отправляем обновление смены:", payload);
 
     await apiClient.post(
       `/web/lists/GetByTitle('Shifts')/items(${shiftId})`,
@@ -79,6 +86,40 @@ export async function updateShift(
     console.log("✅ Смена обновлена.");
   } catch (error) {
     console.error("❌ Ошибка обновления смены:", error);
+    throw error;
+  }
+}
+
+export async function getShiftById(shiftId: number): Promise<Shift> {
+  try {
+    const response = await apiClient.get(
+      `/web/lists/GetByTitle('Shifts')/items(${shiftId})?$select=ID,EmployeeId,Date,ShiftTypeId,StartTime,EndTime,BreakStart,BreakEnd,Hours,IsNightShift,MarkedForDeletion,Editor/Title&$expand=Editor`,
+      {
+        headers: { Accept: "application/json;odata=verbose" },
+      }
+    );
+
+    const item = response.data.d;
+    
+    const shift: Shift = {
+      ID: item.ID,
+      EmployeeId: item.EmployeeId,
+      Date: item.Date,
+      ShiftTypeId: item.ShiftTypeId,
+      StartTime: item.StartTime,
+      EndTime: item.EndTime,
+      BreakStart: item.BreakStart,
+      BreakEnd: item.BreakEnd,
+      Hours: item.Hours,
+      IsNightShift: item.IsNightShift,
+      MarkedForDeletion: item.MarkedForDeletion,
+      ChangeAuthor: item.Editor ? item.Editor.Title : "Неизвестно", // Автор изменений
+    };
+
+    console.log("📌 Получена смена:", shift);
+    return shift;
+  } catch (error) {
+    console.error("❌ Ошибка получения смены по ID:", error);
     throw error;
   }
 }
