@@ -10,6 +10,8 @@ import {
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import RestoreIcon from "@mui/icons-material/Restore";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import { Shift, ShiftTypeDefinition } from "../types";
 import { ShiftDialog } from "./ShiftDialog";
 // BEGIN BULK MODE: Импорт иконок для невыбранного и выбранного состояния чекбокса
@@ -69,6 +71,37 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({
     onDeleteShift(shift.ID.toString());
     closeMenu();
   };
+  const handleMarkForDeletion = () => {
+    onUpdateShift({
+      EmployeeId: shift.EmployeeId,
+      Date: shift.Date,
+      ShiftTypeId: shift.ShiftTypeId,
+      StartTime: shift.StartTime,
+      EndTime: shift.EndTime,
+      BreakStart: shift.BreakStart,
+      BreakEnd: shift.BreakEnd,
+      Hours: shift.Hours,
+      IsNightShift: shift.IsNightShift,
+      MarkedForDeletion: true, // Помечаем для удаления
+    });
+    closeMenu();
+  };
+  
+  const handleUnmarkForDeletion = () => {
+    onUpdateShift({
+      EmployeeId: shift.EmployeeId,
+      Date: shift.Date,
+      ShiftTypeId: shift.ShiftTypeId,
+      StartTime: shift.StartTime,
+      EndTime: shift.EndTime,
+      BreakStart: shift.BreakStart,
+      BreakEnd: shift.BreakEnd,
+      Hours: shift.Hours,
+      IsNightShift: shift.IsNightShift,
+      MarkedForDeletion: false, // Восстанавливаем
+    });
+    closeMenu();
+  };
 
   // BEGIN BULK MODE:
   // Если bulkMode активен, переопределяем onClick кнопки, чтобы не открывать меню,
@@ -119,8 +152,10 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({
             textTransform: "none",
             padding: "2px 8px",
             mb: "1px",
-            position: "relative", // для абсолютного позиционирования чекбокса
-            overflow: "hidden", // предотвращаем вылезание содержимого
+            position: "relative",
+            overflow: "hidden",
+            opacity: shift.MarkedForDeletion ? 0.5 : 1, // Полупрозрачный, если помечен на удаление
+            border: shift.MarkedForDeletion ? "2px dashed gray" : "none", // Пунктирная граница
             "&:hover": { filter: "brightness(90%)" },
           }}
         >
@@ -177,16 +212,31 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({
 
       {/* Если bulkMode не активен, отображаем контекстное меню */}
       {!bulkMode && (
-        <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={closeMenu}>
-          <MenuItem onClick={handleEdit} sx={{ color: "#267db1" }}>
-            <EditIcon fontSize="small" sx={{ mr: 1 }} />
-            Изменить
-          </MenuItem>
-          <MenuItem onClick={handleDelete} sx={{ color: "error.main" }}>
-            <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
-            Удалить
-          </MenuItem>
-        </Menu>
+         <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={closeMenu}>
+         {!shift.MarkedForDeletion ? (
+           <>
+             <MenuItem onClick={handleEdit} sx={{ color: "#267db1" }}>
+               <EditIcon fontSize="small" sx={{ mr: 1 }} />
+               Изменить
+             </MenuItem>
+             <MenuItem onClick={handleMarkForDeletion} sx={{ color: "gray" }}>
+               <VisibilityOffIcon fontSize="small" sx={{ mr: 1 }} />
+               К удалению
+             </MenuItem>
+           </>
+         ) : (
+           <>
+             <MenuItem onClick={handleUnmarkForDeletion} sx={{ color: "#267db1" }}>
+               <RestoreIcon fontSize="small" sx={{ mr: 1 }} />
+               Восстановить
+             </MenuItem>
+             <MenuItem onClick={handleDelete} sx={{ color: "error.main" }}>
+               <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+               Удалить
+             </MenuItem>
+           </>
+         )}
+       </Menu>
       )}
 
       <ShiftDialog
