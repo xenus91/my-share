@@ -83,65 +83,6 @@ export async function updateShift(
   }
 }
 
-export async function markShiftForDeletion(shiftId: number): Promise<void> {
-  try {
-    const digest = await getRequestDigest();
-    const payload = {
-      __metadata: { type: "SP.Data.ShiftsListItem" },
-      MarkedForDeletion: true,
-    };
-
-    await apiClient.post(
-      `/web/lists/GetByTitle('Shifts')/items(${shiftId})`,
-      payload,
-      {
-        headers: {
-          Accept: "application/json;odata=verbose",
-          "Content-Type": "application/json;odata=verbose",
-          "X-RequestDigest": digest,
-          "IF-MATCH": "*",
-          "X-HTTP-Method": "MERGE",
-        },
-      }
-    );
-
-    console.log("✅ Смена помечена для удаления.");
-  } catch (error) {
-    console.error("❌ Ошибка при пометке смены для удаления:", error);
-    throw error;
-  }
-}
-
-export async function unmarkShiftForDeletion(shiftId: number): Promise<void> {
-  try {
-    const digest = await getRequestDigest();
-    const payload = {
-      __metadata: { type: "SP.Data.ShiftsListItem" },
-      MarkedForDeletion: false,
-    };
-
-    await apiClient.post(
-      `/web/lists/GetByTitle('Shifts')/items(${shiftId})`,
-      payload,
-      {
-        headers: {
-          Accept: "application/json;odata=verbose",
-          "Content-Type": "application/json;odata=verbose",
-          "X-RequestDigest": digest,
-          "IF-MATCH": "*",
-          "X-HTTP-Method": "MERGE",
-        },
-      }
-    );
-
-    console.log("✅ Пометка удаления снята.");
-  } catch (error) {
-    console.error("❌ Ошибка при снятии пометки удаления:", error);
-    throw error;
-  }
-}
-
-
 
 
 export async function deleteShift(shiftId: number): Promise<void> {
