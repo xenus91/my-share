@@ -10,14 +10,18 @@ import {
   ensureShiftsListExists,
   ensureShiftPatternListExists,
 } from "./services/listCheck";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
-  Typography,
+  Typography, 
   LinearProgress,
   Box
 } from "@mui/material";
 import "./App.css";
+
+// Создаём экземпляр QueryClient
+const queryClient = new QueryClient();
 
 function App() {
   const [openDialog, setOpenDialog] = useState(true);
@@ -49,6 +53,8 @@ function App() {
   }, []);
 
   return (
+        // Оборачиваем приложение в QueryClientProvider для TanStack Query
+        <QueryClientProvider client={queryClient}>
     <ThemeProvider theme={themeMode === "light" ? lightTheme : darkTheme}>
       <CssBaseline />
       <TimeSheet />
@@ -75,6 +81,7 @@ function App() {
         </DialogContent>
       </Dialog>
     </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 
