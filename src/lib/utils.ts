@@ -35,8 +35,7 @@ export function isHolidayDate(date: string): boolean {
 export function calculateHolidayHours(shift: Shift): number {
   console.log('Начало расчета праздничных часов', shift);
 
-  const shiftDate = parse(shift.Date, 'yyyy-MM-dd', new Date());
-
+  const shiftDate = new Date(shift.Date);
   // Полные даты для начала и конца смены
   let startDateTime = parse(shift.StartTime, 'HH:mm', shiftDate);
   let endDateTime = parse(shift.EndTime, 'HH:mm', shiftDate);
