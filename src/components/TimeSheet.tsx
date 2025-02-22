@@ -787,6 +787,8 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
       width: 200,
       pinned: 'left',
       cellRenderer: 'employeeCellRenderer',
+      filter: 'agTextColumnFilter', // включает текстовый фильтр
+      floatingFilter: true,         // отображает строку фильтра под заголовком
       sortable: false,
       suppressMovable: true,
     },

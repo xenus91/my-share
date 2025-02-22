@@ -33,7 +33,7 @@ export function isHolidayDate(date: string): boolean {
 }
 
 export function calculateHolidayHours(shift: Shift): number {
-  console.log('Начало расчета праздничных часов', shift);
+  //console.log('Начало расчета праздничных часов', shift);
 
   const shiftDate = new Date(shift.Date);
   // Полные даты для начала и конца смены
@@ -45,8 +45,8 @@ export function calculateHolidayHours(shift: Shift): number {
     endDateTime = addDays(endDateTime, 1);
   }
 
-  console.log('Начало смены:', startDateTime);
-  console.log('Конец смены:', endDateTime);
+  //console.log('Начало смены:', startDateTime);
+  //console.log('Конец смены:', endDateTime);
 
   // Полные даты для перерыва
   let breakStartDateTime = shift.BreakStart
@@ -66,13 +66,13 @@ export function calculateHolidayHours(shift: Shift): number {
     }
   }
 
-  console.log('Начало перерыва:', breakStartDateTime);
-  console.log('Конец перерыва:', breakEndDateTime);
+  //console.log('Начало перерыва:', breakStartDateTime);
+  //console.log('Конец перерыва:', breakEndDateTime);
 
   // Получаем список всех праздничных дней
   const holidays = productionCalendar2025.filter(day => day.Type === 'п').map(day => day.Date);
 
-  console.log('Список праздничных дней:', holidays);
+  //console.log('Список праздничных дней:', holidays);
 
   // Инициализируем счетчик праздничных минут
   let holidayMinutes = 0;
@@ -85,9 +85,9 @@ export function calculateHolidayHours(shift: Shift): number {
 
     const currentDayHoliday = holidays.includes(format(currentDate, 'yyyy-MM-dd'));
 
-    console.log('Текущая дата:', currentDate);
-    console.log('Конец текущего периода:', dayEnd);
-    console.log('Является ли текущий день праздничным:', currentDayHoliday);
+    //console.log('Текущая дата:', currentDate);
+    //console.log('Конец текущего периода:', dayEnd);
+    //console.log('Является ли текущий день праздничным:', currentDayHoliday);
 
     if (currentDayHoliday) {
       const holidayStart = max([currentDate, startOfDay(currentDate)]);
@@ -95,9 +95,9 @@ export function calculateHolidayHours(shift: Shift): number {
 
       let dailyHolidayMinutes = (holidayEnd.getTime() - holidayStart.getTime()) / (1000 * 60);
 
-      console.log('Праздничное начало:', holidayStart);
-      console.log('Праздничное окончание:', holidayEnd);
-      console.log('Праздничные минуты до вычета перерыва:', dailyHolidayMinutes);
+      //console.log('Праздничное начало:', holidayStart);
+      //console.log('Праздничное окончание:', holidayEnd);
+      //console.log('Праздничные минуты до вычета перерыва:', dailyHolidayMinutes);
 
       // Учет пересечения перерыва с праздничным временем
       if (breakStartDateTime && breakEndDateTime) {
@@ -108,23 +108,23 @@ export function calculateHolidayHours(shift: Shift): number {
           const breakOverlapMinutes = (breakOverlapEnd.getTime() - breakOverlapStart.getTime()) / (1000 * 60);
           dailyHolidayMinutes -= breakOverlapMinutes;
 
-          console.log('Перерыв пересекается с праздничным временем');
-          console.log('Начало пересечения перерыва:', breakOverlapStart);
-          console.log('Конец пересечения перерыва:', breakOverlapEnd);
-          console.log('Минуты перерыва, вычтенные из праздничного времени:', breakOverlapMinutes);
+          //console.log('Перерыв пересекается с праздничным временем');
+          //console.log('Начало пересечения перерыва:', breakOverlapStart);
+          //console.log('Конец пересечения перерыва:', breakOverlapEnd);
+          //console.log('Минуты перерыва, вычтенные из праздничного времени:', breakOverlapMinutes);
         }
       }
 
       holidayMinutes += dailyHolidayMinutes;
-      console.log('Итоговые праздничные минуты за день:', dailyHolidayMinutes);
+      //console.log('Итоговые праздничные минуты за день:', dailyHolidayMinutes);
     }
 
     currentDate = dayEnd;
   }
 
-  console.log('Общие праздничные минуты:', holidayMinutes);
+  //console.log('Общие праздничные минуты:', holidayMinutes);
   const holidayHours = holidayMinutes / 60;
-  console.log('Общие праздничные часы:', holidayHours);
+  //console.log('Общие праздничные часы:', holidayHours);
   return holidayHours;
 }
 
