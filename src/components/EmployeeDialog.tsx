@@ -12,6 +12,7 @@ import {
   Grid,
   IconButton,
 } from "@mui/material";
+import { format, parseISO } from 'date-fns';
 import SearchIcon from "@mui/icons-material/Search";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { Employee, WorkloadPeriod } from "../types";
@@ -74,7 +75,12 @@ export function EmployeeDialog({
         JobTitle: employee.JobTitle,
         Department: employee.Department,
         Office: employee.Office,
-        workloadPeriods: employee.workloadPeriods.map(p => ({ ...p })),
+        // Форматируем даты для корректного отображения в input type="date"
+        workloadPeriods: employee.workloadPeriods.map((p) => ({
+          ...p,
+          StartDate: p.StartDate ? format(parseISO(p.StartDate), "yyyy-MM-dd") : "",
+          EndDate: p.EndDate ? format(parseISO(p.EndDate), "yyyy-MM-dd") : "",
+        })),
       });
       console.log("Employee loaded:", employee);
     } else {
@@ -96,16 +102,14 @@ export function EmployeeDialog({
       return;
     }
     const newPeriod: WorkloadPeriod = {
-      ID: -Math.floor(Math.random() * 1000000), // временный отрицательный ID
+      ID: -Math.floor(Math.random() * 1000000),
       StartDate: "",
       EndDate: "",
       Fraction: 1,
-      EmployeeId: lookupEmployeeId, // ✅ Добавляем EmployeeId из состояния
+      EmployeeId: lookupEmployeeId,
     };
-    setFormData(prev => ({
-      ...prev,
-      workloadPeriods: [...prev.workloadPeriods, newPeriod],
-    }));
+    const updatedPeriods = [...formData.workloadPeriods, newPeriod];
+    setFormData((prev) => ({ ...prev, workloadPeriods: updatedPeriods }));
   };
 
   // Функция удаления периода: если период уже сохранён (ID >= 0), вызывается API, иначе просто удаляется из состояния
@@ -118,10 +122,12 @@ export function EmployeeDialog({
         return;
       }
     }
-    setFormData(prev => ({
-      ...prev,
-      workloadPeriods: prev.workloadPeriods.filter(p => p.ID !== ID),
-    }));
+    const updatedPeriods = formData.workloadPeriods.filter((p) => p.ID !== ID);
+    setFormData((prev) => ({ ...prev, workloadPeriods: updatedPeriods }));
+    // Передаём обновлённые данные сотрудника в родительский компонент
+    if (employee) {
+      onSave({ ...employee, workloadPeriods: updatedPeriods });
+    }
   };
 
   const handleChangeWorkloadPeriod = (
@@ -129,12 +135,10 @@ export function EmployeeDialog({
     key: keyof WorkloadPeriod,
     value: string | number
   ) => {
-    setFormData(prev => ({
-      ...prev,
-      workloadPeriods: prev.workloadPeriods.map(p =>
-        p.ID === ID ? { ...p, [key]: value } : p
-      ),
-    }));
+    const updatedPeriods = formData.workloadPeriods.map((p) =>
+      p.ID === ID ? { ...p, [key]: value } : p
+    );
+    setFormData((prev) => ({ ...prev, workloadPeriods: updatedPeriods }));
   };
 
   // Функция сохранения (создания или обновления) периода занятости
@@ -145,9 +149,8 @@ export function EmployeeDialog({
     }
     try {
       let updatedPeriod: WorkloadPeriod;
-  
       if (period.ID < 0) {
-        // Создаём новый период, получаем его ID
+        // Создание нового периода
         const newID = await createWorkloadPeriod(lookupEmployeeId, period);
         updatedPeriod = { ...period, ID: newID, EmployeeId: lookupEmployeeId };
         alert("Период успешно сохранён.");
@@ -156,21 +159,12 @@ export function EmployeeDialog({
         updatedPeriod = { ...period };
         alert("Период успешно обновлён.");
       }
-  
-      // Обновляем formData
-      setFormData(prev => ({
-        ...prev,
-        workloadPeriods: prev.workloadPeriods.map(p =>
-          p.ID === period.ID ? updatedPeriod : p
-        ),
-      }));
-  
-      // Обновляем объект `employee` через `onSave`
+      const updatedPeriods = formData.workloadPeriods.map((p) =>
+        p.ID === period.ID ? updatedPeriod : p
+      );
+      setFormData((prev) => ({ ...prev, workloadPeriods: updatedPeriods }));
       if (employee) {
-        onSave({
-          ...employee,
-          workloadPeriods: [...employee.workloadPeriods.filter(p => p.ID !== period.ID), updatedPeriod],
-        });
+        onSave({ ...employee, workloadPeriods: updatedPeriods });
       }
     } catch (error: any) {
       alert(error.message || "Ошибка при сохранении периода");
