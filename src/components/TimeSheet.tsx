@@ -118,7 +118,7 @@ export default function TimeSheet() {
     async function loadShiftPatterns() {
       try {
         const patterns = await getShiftPatterns();
-        console.log("✅ Получены паттерны смен:", patterns);
+        //console.log("✅ Получены паттерны смен:", patterns);
         setShiftPatterns(patterns);
       } catch (error) {
         console.error("❌ Ошибка загрузки паттернов смен:", error);
@@ -138,8 +138,8 @@ export default function TimeSheet() {
           getEmployee(),
           getWorkloadPeriods()
         ]);
-        console.log("✅ Загружены сотрудники:", employees);
-        console.log("✅ Загружены периоды занятости:", periods);
+        //console.log("✅ Загружены сотрудники:", employees);
+        //console.log("✅ Загружены периоды занятости:", periods);
   
         // Для каждого сотрудника фильтруем периоды, соответствующие его ID
         const entries: TimeSheetEntry[] = employees.map((emp: Employee) => ({
@@ -166,7 +166,7 @@ export default function TimeSheet() {
     async function loadShiftTypes() {
       try {
         const types = await getShiftTypes();
-        console.log("✅ Получены типы смен:", types);
+        //console.log("✅ Получены типы смен:", types);
         setShiftTypes(types);
       } catch (error) {
         console.error("❌ Ошибка загрузки типов смен:", error);
@@ -187,7 +187,7 @@ export default function TimeSheet() {
     async function loadShifts() {
       try {
         const shifts = await getShifts();
-        console.log("Запрос getShifts выполнен", shifts);
+        //console.log("Запрос getShifts выполнен", shifts);
         // Обновляем timeData, добавляя смены к каждому сотруднику
         setTimeData((prevData) =>
           prevData.map((employee) => {
@@ -414,7 +414,7 @@ const handleDeletePattern = async (patternId: number): Promise<void> => {
     try {
       await deleteEmployee(ID);
       setTimeData((prev) => prev.filter((emp) => emp.ID !== ID));
-      console.log("✅ Сотрудник успешно удалён.");
+      //console.log("✅ Сотрудник успешно удалён.");
     } catch (error) {
       console.error("❌ Ошибка при удалении сотрудника:", error);
     }
