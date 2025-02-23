@@ -967,6 +967,7 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
           width: 150,
           minWidth: 150,
           sortable: false,
+          suppressMovable: true,
           cellRenderer: "shiftCellRenderer",
           cellRendererParams: {
             shiftTypes,
