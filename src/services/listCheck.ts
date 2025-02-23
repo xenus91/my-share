@@ -56,7 +56,7 @@ export async function ensureEmployeesListExists(): Promise<void> {
       const existingFields: string[] = fieldsResponse.data.d.results.map((f: any) => f.Title);
 
       // Поля, которые должны присутствовать в списке "Employees"
-      const requiredFields: { Title: string; FieldTypeKind: number; __metadata: { type: string } }[] = [
+      const requiredFields: { Title: string; FieldTypeKind: number; Decimals?: number, __metadata: { type: string } }[] = [
         {
           Title: "Employee",
           FieldTypeKind: 20, // Тип "User"
@@ -79,6 +79,17 @@ export async function ensureEmployeesListExists(): Promise<void> {
         },
         {
           Title: "EmployeeID",
+          FieldTypeKind: 2,
+          __metadata: { type: "SP.FieldText" }
+        },
+        {
+          Title: "ShiftNumber",
+          FieldTypeKind: 9,
+          Decimals: 0,
+          __metadata: { type: "SP.FieldNumber" }
+        },
+        {
+          Title: "ShiftTimeType",
           FieldTypeKind: 2,
           __metadata: { type: "SP.FieldText" }
         }
