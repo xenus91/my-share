@@ -86,7 +86,7 @@ interface FilterState {
 export default function TimeSheet() {
 
   // Добавляем состояние для фильтра сотрудников
-const [employeeFilterText, setEmployeeFilterText] = useState<string>('');
+  const [employeeFilter, setEmployeeFilter] = useState<{ field: string; value: string } | null>(null);
    // Состояние для фильтрации по дате/типу смены
   const [activeFilter, setActiveFilter] = useState<FilterState | null>(null);
   const gridRef = useRef<AgGridReact>(null);
@@ -598,9 +598,14 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
   // ===========================
   const rows = useMemo(() => {
     return timeData
-    .filter((employee) =>
-      employee.Title.toLowerCase().includes(employeeFilterText.toLowerCase())
-    )
+    .filter((employee) => {
+      if (!employeeFilter || !employeeFilter.value.trim()) return true;
+      const field = employeeFilter.field;
+      // Приводим employee к any, чтобы использовать динамический ключ
+      const fieldValue = (employee as any)[field];
+      if (typeof fieldValue !== 'string') return false;
+      return fieldValue.toLowerCase().includes(employeeFilter.value.toLowerCase());
+    })
       // Фильтруем сотрудников, если activeFilter установлен
       .filter((employee) => {
         if (!activeFilter) return true;
@@ -740,7 +745,7 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
   
         return row;
       });
-  }, [timeData,employeeFilterText, days, shiftTypes, activeFilter]);
+  }, [timeData,employeeFilter, days, shiftTypes, activeFilter]);
   
   
 
@@ -751,7 +756,7 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
     {
       headerComponent: (params: any) => (
         // Передаем onFilterChange для обновления employeeFilterText
-        <EmployeeHeaderWithFilter {...params} onFilterChange={setEmployeeFilterText} />
+        <EmployeeHeaderWithFilter {...params} onFilterChange={setEmployeeFilter} />
       ),
       field: 'Title',
       filterValueGetter: (params) => params.data.Title,
