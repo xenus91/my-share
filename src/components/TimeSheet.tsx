@@ -68,7 +68,8 @@ import { createShiftType, deleteShiftType, getShiftTypes, updateShiftType } from
 import { createShift, deleteShift, getShiftById, getShifts, updateShift } from '../services/shiftService';
 import { createShiftPattern, deleteShiftPattern, getShiftPatterns, updateShiftPattern } from '../services/shiftPatternService';
 import { ShiftDialog } from './ShiftDialog';
-import EmployeeHeaderRenderer  from './EmployeeHeaderRenderer';
+import EmployeeHeaderWithFilter from './EmployeeHeaderWithFilter';
+
 
 type ViewPeriod = 'week' | 'month' | 'year';
 
@@ -83,6 +84,9 @@ interface FilterState {
 }
 
 export default function TimeSheet() {
+
+  // Добавляем состояние для фильтра сотрудников
+const [employeeFilterText, setEmployeeFilterText] = useState<string>('');
    // Состояние для фильтрации по дате/типу смены
   const [activeFilter, setActiveFilter] = useState<FilterState | null>(null);
   const gridRef = useRef<AgGridReact>(null);
@@ -153,47 +157,7 @@ export default function TimeSheet() {
   }, []);
 
   // Типы смен (ID — число)
-  const [shiftTypes, setShiftTypes] = useState<ShiftTypeDefinition[]>([
-   /* {
-      ID: 1,
-      Name: 'день',
-      BackgroundColor: 'gray',
-      TextColor: 'white',
-      AffectsWorkingNorm: false,
-      RequiredStartEndTime: true,
-      Description: 'д',
-      DefaultStartTime: '08:00',
-      DefaultEndTime: '20:00',
-      DefaultBreakStart: '12:00',
-      DefaultBreakEnd: '13:00',
-    },
-    {
-      ID: 2,
-      Name: 'ночь',
-      BackgroundColor: 'black',
-      TextColor: 'white',
-      AffectsWorkingNorm: false,
-      RequiredStartEndTime: true,
-      Description: 'н',
-      DefaultStartTime: '20:00',
-      DefaultEndTime: '08:00',
-      DefaultBreakStart: '21:00',
-      DefaultBreakEnd: '22:00',
-    },
-    {
-      ID: 3,
-      Name: 'ГПХ',
-      BackgroundColor: 'yellow',
-      TextColor: 'black',
-      AffectsWorkingNorm: false,
-      RequiredStartEndTime: true,
-      Description: 'аф',
-      DefaultStartTime: '00:00',
-      DefaultEndTime: '00:00',
-      DefaultBreakStart: '00:00',
-      DefaultBreakEnd: '00:00',
-    },*/
-  ]);
+  const [shiftTypes, setShiftTypes] = useState<ShiftTypeDefinition[]>([]);
 
  
 
@@ -634,6 +598,9 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
   // ===========================
   const rows = useMemo(() => {
     return timeData
+    .filter((employee) =>
+      employee.Title.toLowerCase().includes(employeeFilterText.toLowerCase())
+    )
       // Фильтруем сотрудников, если activeFilter установлен
       .filter((employee) => {
         if (!activeFilter) return true;
@@ -773,7 +740,7 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
   
         return row;
       });
-  }, [timeData, days, shiftTypes, activeFilter]);
+  }, [timeData,employeeFilterText, days, shiftTypes, activeFilter]);
   
   
 
@@ -782,15 +749,19 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
   // ===========================
   const fixedColumns: ColDef[] = useMemo(() => [
     {
-      headerComponent: EmployeeHeaderRenderer, // Используем наш компонент заголовка
+      headerComponent: (params: any) => (
+        // Передаем onFilterChange для обновления employeeFilterText
+        <EmployeeHeaderWithFilter {...params} onFilterChange={setEmployeeFilterText} />
+      ),
       field: 'Title',
+      filterValueGetter: (params) => params.data.Title,
       width: 200,
       pinned: 'left',
       cellRenderer: 'employeeCellRenderer',
-      filter: 'agTextColumnFilter', // включает текстовый фильтр
-      floatingFilter: true,         // отображает строку фильтра под заголовком
-      sortable: false,
+      sortable: true,
       suppressMovable: true,
+      //filter: EmployeeFilter,  // стандартная текстовая фильтрация
+      floatingFilter: false,          // отображение строки фильтра
     },
     {
       headerComponent: () => (
@@ -1045,8 +1016,8 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
   const gridOptions: GridOptions = useMemo(() => ({
     defaultColDef: {
       resizable: true,
-      sortable: false,
-      filter: false,
+      sortable: true,
+      filter: true,
     },
     rowHeight: 80,
     headerHeight: 120,
