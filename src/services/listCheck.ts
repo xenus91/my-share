@@ -36,7 +36,7 @@ export async function ensureEmployeesListExists(): Promise<void> {
             "X-RequestDigest": digest
           }
         });
-        //console.log("✅ Список 'Employees' создан:", createListResponse.data);
+        console.log("✅ Список 'Employees' создан:", createListResponse.data);
         listExists = true;
       } catch (createError) {
         console.error("❌ Ошибка создания списка 'Employees':", createError);
@@ -147,7 +147,7 @@ export async function ensureWorkloadPeriodsListExists(): Promise<void> {
             "X-RequestDigest": digest
           }
         });
-        //console.log("✅ Список 'WorkloadPeriods' создан:", createListResponse.data);
+        console.log("✅ Список 'WorkloadPeriods' создан:", createListResponse.data);
         listExists = true;
       } catch (createError) {
         console.error("❌ Ошибка создания списка 'WorkloadPeriods':", createError);
@@ -266,7 +266,7 @@ export async function ensureShiftTypeListExists(): Promise<void> {
             "X-RequestDigest": digest,
           },
         });
-        //console.log("✅ Список 'ShiftType' создан:", createListResponse.data);
+        console.log("✅ Список 'ShiftType' создан:", createListResponse.data);
         listExists = true;
       } catch (createError) {
         console.error("❌ Ошибка создания списка 'ShiftType':", createError);
@@ -370,7 +370,7 @@ export async function ensureShiftsListExists(): Promise<void> {
             },
           }
         );
-        //console.log("✅ Список 'Shifts' создан:", createListResponse.data);
+        console.log("✅ Список 'Shifts' создан:", createListResponse.data);
         listExists = true;
       } catch (createError) {
         console.error("❌ Ошибка создания списка 'Shifts':", createError);
@@ -544,7 +544,7 @@ export async function ensureShiftPatternListExists(): Promise<void> {
             },
           }
         );
-        //console.log("✅ Список 'ShiftPattern' создан:", createListResponse.data);
+        console.log("✅ Список 'ShiftPattern' создан:", createListResponse.data);
         listExists = true;
       } catch (createError) {
         console.error("❌ Ошибка создания списка 'ShiftPattern':", createError);

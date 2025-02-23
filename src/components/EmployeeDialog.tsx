@@ -15,7 +15,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import SearchIcon from "@mui/icons-material/Search";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { Employee, WorkloadPeriod } from "../types";
+import { Employee, ShiftTimeType, WorkloadPeriod } from "../types";
 import {
   getUserIdByLoginName,
   getUserPropertiesByAccountName,
@@ -57,6 +57,9 @@ export function EmployeeDialog({
     Department: "",
     Office: "",
     workloadPeriods: [] as WorkloadPeriod[],
+     //newColumn: новые поля
+     ShiftNumber: null as number | null,
+     ShiftTimeType: "" as ShiftTimeType | "",
   });
 
   // Здесь будем хранить корректный lookup‑ID сотрудника (его основной ID из SharePoint)
@@ -83,6 +86,9 @@ export function EmployeeDialog({
           StartDate: p.StartDate ? format(parseISO(p.StartDate), "yyyy-MM-dd") : "",
           EndDate: p.EndDate ? format(parseISO(p.EndDate), "yyyy-MM-dd") : "",
         })),
+         //newColumn: заполняем новые поля
+         ShiftNumber: employee.ShiftNumber,
+         ShiftTimeType: employee.ShiftTimeType,
       });
       //console.log("Employee loaded:", employee);
     } else {
@@ -93,6 +99,9 @@ export function EmployeeDialog({
         Department: "",
         Office: "",
         workloadPeriods: [],
+          //newColumn: начальные значения новых полей
+        ShiftNumber: null,
+        ShiftTimeType: "",
       });
       setLookupEmployeeId(null);
     }
@@ -196,6 +205,9 @@ export function EmployeeDialog({
           JobTitle: props.jobTitle,
           Department: props.department,
           Office: props.office,
+           //newColumn: можно задать дефолтные значения для новых полей, если они есть
+           ShiftNumber: null,
+           ShiftTimeType: "",
         }));
       } else {
         setError("Не удалось получить расширенные свойства пользователя");
@@ -210,7 +222,7 @@ export function EmployeeDialog({
   // Отправка формы – создание сотрудника в SharePoint
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.Title || !formData.JobTitle || !formData.Department) {
+    if (!formData.Title || !formData.JobTitle || !formData.Department || !formData.EmployeeID || !formData.Office) {
       setError("Заполните все обязательные поля");
       return;
     }
@@ -227,6 +239,9 @@ export function EmployeeDialog({
           jobTitle: formData.JobTitle,
           department: formData.Department,
           office: formData.Office,
+           //newColumn: передаем новые поля
+           ShiftNumber: formData.ShiftNumber,
+           ShiftTimeType: formData.ShiftTimeType,
         });
   
         //console.log(`✅ Сотрудник (ID: ${employee.ID}) обновлён`);
@@ -239,22 +254,25 @@ export function EmployeeDialog({
           JobTitle: formData.JobTitle,
           Department: formData.Department,
           Office: formData.Office,
+           //newColumn: передаем новые поля
+           ShiftNumber: formData.ShiftNumber,
+           ShiftTimeType: formData.ShiftTimeType,
         });
-      } else {
-        // ✅ Создаём нового сотрудника
-        if (!userId) {
-          setError("Ошибка: Не найден userId.");
-          return;
-        }
-  
+      }  else {
+        // Если userId отсутствует, используем пустую строку или другое значение по умолчанию
+        const effectiveUserId = userId ? Number(userId) : 0;
         const payload = {
           preferredName: formData.Title,
           EmployeeID: formData.EmployeeID,
-          employeeId: userId.toString(), // ✅ Преобразуем `userId` в `string`
+          employeeId: effectiveUserId,
           jobTitle: formData.JobTitle,
           department: formData.Department,
           office: formData.Office,
+           //newColumn: передаем новые поля
+           ShiftNumber: formData.ShiftNumber,
+           ShiftTimeType: formData.ShiftTimeType,
         };
+  
   
         const createdEmployee: any = await createEmployee(payload);
         //console.log("✅ Создан новый сотрудник:", createdEmployee);
@@ -269,6 +287,9 @@ export function EmployeeDialog({
           Department: createdEmployee.Department,
           Office: createdEmployee.Office,
           workloadPeriods: formData.workloadPeriods,
+          //newColumn: новые поля
+          ShiftNumber: createdEmployee.ShiftNumber,
+          ShiftTimeType: createdEmployee.ShiftTimeType,
         });
       }
   
@@ -318,7 +339,7 @@ export function EmployeeDialog({
                 <TextField
                   label="Логин пользователя"
                   fullWidth
-                  margin="normal"
+                  margin="dense"
                   value={login}
                   onChange={(e) => setLogin(e.target.value)}
                   
@@ -331,7 +352,7 @@ export function EmployeeDialog({
                 <TextField
                   label="Title"
                   fullWidth
-                  margin="normal"
+                  margin="dense"
                   value={formData.Title}
                   onChange={(e) =>
                     setFormData({ ...formData, Title: e.target.value })
@@ -340,7 +361,7 @@ export function EmployeeDialog({
                 <TextField
                   label="JobTitle"
                   fullWidth
-                  margin="normal"
+                  margin="dense"
                   value={formData.JobTitle}
                   onChange={(e) =>
                     setFormData({ ...formData, JobTitle: e.target.value })
@@ -350,7 +371,7 @@ export function EmployeeDialog({
                  <TextField
                   label="EmployeeID"
                   fullWidth
-                  margin="normal"
+                  margin="dense"
                   value={formData.EmployeeID}
                   onChange={(e) =>
                     setFormData({ ...formData, EmployeeID: e.target.value })
@@ -360,7 +381,7 @@ export function EmployeeDialog({
                 <TextField
                   label="Department"
                   fullWidth
-                  margin="normal"
+                  margin="dense"
                   value={formData.Department}
                   onChange={(e) =>
                     setFormData({ ...formData, Department: e.target.value })
@@ -370,11 +391,32 @@ export function EmployeeDialog({
                 <TextField
                   label="Office"
                   fullWidth
-                  margin="normal"
+                  margin="dense"
                   value={formData.Office}
                   onChange={(e) =>
                     setFormData({ ...formData, Office: e.target.value })
                   }
+                />
+                {/* newColumn: добавляем новые поля */}
+                <TextField
+                  label="Shift Number"
+                  fullWidth
+                  margin="dense"
+                  value={formData.ShiftNumber ?? ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, ShiftNumber: e.target.value ? Number(e.target.value) : null })
+                  }
+                  helperText="Введите число или оставьте пустым"
+                />
+                <TextField
+                  label="Shift Time Type"
+                  fullWidth
+                  margin="dense"
+                  value={formData.ShiftTimeType}
+                  onChange={(e) =>
+                    setFormData({ ...formData, ShiftTimeType: e.target.value as ShiftTimeType | "" })
+                  }
+                  helperText="Введите значение (утро, день, вечер, ночь) или оставьте пустым"
                 />
               </Grid>
               {/* Правая колонка – периоды занятости */}

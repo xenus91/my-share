@@ -97,10 +97,13 @@ export async function getEmployee(): Promise<Employee[]> {
 export async function createEmployee(payload: {
     preferredName: string;
     EmployeeID: string;
-    employeeId: string;
+    employeeId: number;
     jobTitle: string;
     department: string;
     office: string;
+        //newColumn: добавляем новые поля
+        ShiftNumber: number | null;
+        ShiftTimeType: string; // или тип ShiftTimeType | ""
 }): Promise<Employee> {
     try {
         const digest = await getRequestDigest();
@@ -111,7 +114,10 @@ export async function createEmployee(payload: {
             EmployeeId: payload.employeeId,
             JobTitle: payload.jobTitle,
             Department: payload.department,
-            Office: payload.office
+            Office: payload.office,
+             //newColumn: новые поля
+             ShiftNumber: payload.ShiftNumber,
+             ShiftTimeType: payload.ShiftTimeType,
         };
 
         const response = await apiClient.post(
@@ -143,6 +149,9 @@ export async function updateEmployee(
       jobTitle: string;
       department: string;
       office: string;
+      //newColumn: новые поля
+      ShiftNumber: number | null;
+      ShiftTimeType: string;
     }
   ): Promise<void> {
     try {
@@ -159,6 +168,9 @@ export async function updateEmployee(
         Department: payload.department,
         Office: payload.office,
         Modified: new Date().toISOString(), 
+         //newColumn: новые поля
+         ShiftNumber: payload.ShiftNumber,
+         ShiftTimeType: payload.ShiftTimeType,
       };
   
       // 4. Отправляем запрос с необходимыми заголовками
@@ -176,7 +188,7 @@ export async function updateEmployee(
         }
       );
   
-      //console.log(`✅ Сотрудник обновлён. Статус: ${response.status}`);
+      console.log(`✅ Сотрудник обновлён. Статус: ${response.status}`);
     } catch (error: any) {
       console.error("❌ Детали ошибки:", {
         url: error.config?.url,

@@ -9,15 +9,25 @@ export interface WorkloadPeriod {
   EmployeeId: number;  // ✅ Добавляем это поле!
 }
 
+// Или используя enum:
+export enum ShiftTimeType {
+  Morning = 'утро',
+  Day = 'день',
+  Evening = 'вечер',
+  Night = 'ночь'
+}
+
 // Элемент списка "Employees"
 export interface Employee {
   ID: number;           // уникальный числовой идентификатор из SharePoint
-  EmployeeID: string,
+  EmployeeID: string;
   Title: string;        // имя сотрудника (используем стандартное поле Title)
   JobTitle: string;     // должность сотрудника
   Department: string;
   Office: string;
-  workloadPeriods: WorkloadPeriod[];  // связанные периоды занятости (можно заполнять через расширенный запрос)
+  ShiftNumber: number | null; // newColumn: теперь может принимать null
+  ShiftTimeType: ShiftTimeType | ""; // newColumn: может быть либо значением из enum, либо пустой строкой
+  workloadPeriods: WorkloadPeriod[];  // связанные периоды занятости
 }
 
 // Интерфейс для правил чередования смен

@@ -12,6 +12,9 @@ const filterableFields = [
     { value: 'JobTitle', label: 'Должность' },
     { value: 'Department', label: 'Отдел' },
     { value: 'Office', label: 'Офис' },
+    { value: 'EmployeeID', label: 'Табельный номер' },
+    { value: 'ShiftNumber', label: 'Номер смены' },
+    { value: 'ShiftTimeType', label: 'Время смены' },
 ];
 
 const EmployeeHeaderWithFilter = (props: any) => {
@@ -44,6 +47,12 @@ const EmployeeHeaderWithFilter = (props: any) => {
         handleFilterChange(selectedField, newValue);
     };
 
+
+    // Кнопка сброса фильтрации // new
+    const handleResetFilter = () => {
+        setFilterText('');
+        handleFilterChange(selectedField, '');
+    };
     // Открытие/закрытие popover
     const handleOpenFilterPopover = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
@@ -72,7 +81,7 @@ const EmployeeHeaderWithFilter = (props: any) => {
                             width: '10px',
                             height: '10px',
                             borderRadius: '50%',
-                          },
+                        },
                         mr: 2,
                     }} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
                         <IconButton
@@ -113,7 +122,7 @@ const EmployeeHeaderWithFilter = (props: any) => {
                 }}
             >
                 <Box sx={{ p: 2, width: 250 }}>
-                    <InputLabel id="employee-filter-field-label">Свойство для фильтрации</InputLabel>
+                    <InputLabel id="employee-filter-field-label"  sx={{ fontSize: '0.8rem' }}>Свойство для фильтрации</InputLabel>
                     <Select
                         labelId="employee-filter-field-label"
                         value={selectedField}
@@ -121,7 +130,11 @@ const EmployeeHeaderWithFilter = (props: any) => {
                         fullWidth
                         variant="outlined"
                         size="small"
-                        sx={{ mt: 1 }}
+                        sx={{
+                            mt: 0.5,
+                            fontSize: '0.8rem', // new: уменьшенный размер шрифта
+                            height: '30px',     // new: уменьшенная высота
+                          }}
                     >
                         {filterableFields.map((field) => (
                             <MenuItem key={field.value} value={field.value}>
@@ -136,8 +149,19 @@ const EmployeeHeaderWithFilter = (props: any) => {
                         value={filterText}
                         onChange={handleTextChange}
                         fullWidth
-                        sx={{ mt: 2 }}
+                        sx={{
+                            mt: 1,
+                            fontSize: '0.8rem', // new: уменьшенный размер шрифта
+                            '& .MuiInputBase-input': {
+                              padding: '4px 8px', // new: уменьшенные внутренние отступы
+                            }
+                          }}
                     />
+                    <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}> {/* new */}
+                        <Button variant="outlined" size="small" onClick={handleResetFilter}>
+                            Сбросить
+                        </Button>
+                    </Box>
                 </Box>
             </Popover>
             <EmployeeDialog
