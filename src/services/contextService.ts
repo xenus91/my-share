@@ -3,7 +3,7 @@ import  apiClient from '../api'
 
 export async function getRequestDigest(): Promise<string> {
   try {
-      console.log("🔹 Запрашиваем X-RequestDigest...");
+      //console.log("🔹 Запрашиваем X-RequestDigest...");
 
       const response = await fetch(`${API_BASE_URL}/contextinfo`, { // Используем API_BASE_URL
           method: "POST",
@@ -21,7 +21,7 @@ export async function getRequestDigest(): Promise<string> {
       const data = await response.json();
       const digest = data.d.GetContextWebInformation.FormDigestValue;
       
-      console.log("✅ X-RequestDigest получен:", digest);
+      //console.log("✅ X-RequestDigest получен:", digest);
       return digest;
   } catch (error) {
       console.error("❌ Ошибка получения X-RequestDigest:", error);

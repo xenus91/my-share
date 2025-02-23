@@ -82,7 +82,7 @@ export function EmployeeDialog({
           EndDate: p.EndDate ? format(parseISO(p.EndDate), "yyyy-MM-dd") : "",
         })),
       });
-      console.log("Employee loaded:", employee);
+      //console.log("Employee loaded:", employee);
     } else {
       setFormData({
         Title: "",
@@ -224,7 +224,7 @@ export function EmployeeDialog({
           office: formData.Office,
         });
   
-        console.log(`✅ Сотрудник (ID: ${employee.ID}) обновлён`);
+        //console.log(`✅ Сотрудник (ID: ${employee.ID}) обновлён`);
   
         // 🔹 Локально обновляем состояние, чтобы UI сразу изменился
         onSave({
@@ -250,7 +250,7 @@ export function EmployeeDialog({
         };
   
         const createdEmployee: any = await createEmployee(payload);
-        console.log("✅ Создан новый сотрудник:", createdEmployee);
+        //console.log("✅ Создан новый сотрудник:", createdEmployee);
   
         setLookupEmployeeId(createdEmployee.ID);
   
@@ -278,8 +278,8 @@ export function EmployeeDialog({
   // Добавляем вывод логов (например, в консоль) при открытии формы, чтобы отобразить параметры сотрудника
   useEffect(() => {
     if (isOpen) {
-      console.log("Форма открыта. Employee:", employee);
-      console.log("LookupEmployeeId =", lookupEmployeeId);
+      //console.log("Форма открыта. Employee:", employee);
+      //console.log("LookupEmployeeId =", lookupEmployeeId);
     }
   }, [isOpen, employee, lookupEmployeeId]);
 

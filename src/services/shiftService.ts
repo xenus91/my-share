@@ -36,7 +36,7 @@ export async function createShift(
       }
     );
 
-    console.log("✅ Смена создана:", response.data);
+    //console.log("✅ Смена создана:", response.data);
     return response.data.d.Id;
   } catch (error) {
     console.error("❌ Ошибка создания смены:", error);
@@ -67,7 +67,7 @@ export async function updateShift(
       payload.MarkedForDeletion = shift.MarkedForDeletion;
     }
 
-    console.log("📌 Отправляем обновление смены:", payload);
+    //console.log("📌 Отправляем обновление смены:", payload);
 
     await apiClient.post(
       `/web/lists/GetByTitle('Shifts')/items(${shiftId})`,
@@ -83,7 +83,7 @@ export async function updateShift(
       }
     );
 
-    console.log("✅ Смена обновлена.");
+    //console.log("✅ Смена обновлена.");
   } catch (error) {
     console.error("❌ Ошибка обновления смены:", error);
     throw error;
@@ -116,7 +116,7 @@ export async function getShiftById(shiftId: number): Promise<Shift> {
       ChangeAuthor: item.Editor ? item.Editor.Title : "Неизвестно", // Автор изменений
     };
 
-    console.log("📌 Получена смена:", shift);
+    //console.log("📌 Получена смена:", shift);
     return shift;
   } catch (error) {
     console.error("❌ Ошибка получения смены по ID:", error);
@@ -142,7 +142,7 @@ export async function deleteShift(shiftId: number): Promise<void> {
       }
     );
 
-    console.log("✅ Смена отправлена в корзину.");
+    //console.log("✅ Смена отправлена в корзину.");
   } catch (error) {
     console.error("❌ Ошибка удаления смены:", error);
     throw error;
@@ -175,7 +175,7 @@ export async function getShifts(): Promise<Shift[]> {
       MarkedForDeletion: item.MarkedForDeletion
     }));
 
-    console.log("✅ Получены смены:", items);
+    //console.log("✅ Получены смены:", items);
     return items;
   } catch (error) {
     console.error("❌ Ошибка получения смен:", error);

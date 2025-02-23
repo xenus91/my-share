@@ -28,7 +28,7 @@ export async function createShiftPattern(
       }
     );
 
-    console.log("✅ Паттерн смены создан:", response.data);
+    //console.log("✅ Паттерн смены создан:", response.data);
     return response.data.d.Id;
   } catch (error) {
     console.error("❌ Ошибка создания паттерна смены:", error);
@@ -62,7 +62,7 @@ export async function updateShiftPattern(
       }
     );
 
-    console.log("✅ Паттерн смены обновлен.");
+    //console.log("✅ Паттерн смены обновлен.");
   } catch (error) {
     console.error("❌ Ошибка обновления паттерна смены:", error);
     throw error;
@@ -85,7 +85,7 @@ export async function deleteShiftPattern(shiftPatternId: number): Promise<void> 
       }
     );
 
-    console.log("✅ Паттерн смены отправлен в корзину.");
+    //console.log("✅ Паттерн смены отправлен в корзину.");
   } catch (error) {
     console.error("❌ Ошибка удаления паттерна смены:", error);
     throw error;
@@ -105,7 +105,7 @@ export async function getShiftPatterns(): Promise<ShiftPattern[]> {
       Pattern: JSON.parse(item.Pattern || "[]"),
     }));
 
-    console.log("✅ Получены паттерны смен:", items);
+    //console.log("✅ Получены паттерны смен:", items);
     return items;
   } catch (error) {
     console.error("❌ Ошибка получения паттернов смен:", error);

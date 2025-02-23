@@ -50,10 +50,10 @@ export async function getUserIdByLoginName(loginName: string): Promise<string | 
 
     const fullLogin = `i:0#.w|retail\\${loginName}`;
     const encodedLogin = encodeURIComponent(fullLogin);
-    console.log("Используемый логин:", fullLogin);
+    //console.log("Используемый логин:", fullLogin);
 
     const url = `/web/siteusers(@v)?@v='${encodedLogin}'`;
-    console.log("Формируем URL:", url);
+    //console.log("Формируем URL:", url);
 
     try {
         const response = await apiClient.get(url, {
@@ -80,7 +80,7 @@ export async function getEmployee(): Promise<Employee[]> {
         }
       }
     );
-    console.log("✅ Получены сотрудники:", response.data);
+    //console.log("✅ Получены сотрудники:", response.data);
     // В odata=verbose данные списка находятся в response.data.d.results
     return response.data.d.results;
   } catch (error) {
@@ -122,7 +122,7 @@ export async function createEmployee(payload: {
                 }
             }
         );
-        console.log("✅ Сотрудник создан:", response.data);
+        //console.log("✅ Сотрудник создан:", response.data);
         return response.data.d;
     } catch (error) {
         console.error("❌ Ошибка создания сотрудника:", error);
@@ -170,7 +170,7 @@ export async function updateEmployee(
         }
       );
   
-      console.log(`✅ Сотрудник обновлён. Статус: ${response.status}`);
+      //console.log(`✅ Сотрудник обновлён. Статус: ${response.status}`);
     } catch (error: any) {
       console.error("❌ Детали ошибки:", {
         url: error.config?.url,
@@ -197,7 +197,7 @@ export async function updateEmployee(
           },
         }
       );
-      console.log("✅ Сотрудник отправлен в корзину.");
+      //console.log("✅ Сотрудник отправлен в корзину.");
     } catch (error: any) {
       console.error("❌ Ошибка удаления сотрудника:", error);
       throw error;
@@ -255,7 +255,7 @@ export async function createWorkloadPeriod(employeeId: number, period: WorkloadP
         }
       );
   
-      console.log("✅ Период занятости создан:", response.data);
+      //console.log("✅ Период занятости создан:", response.data);
       return response.data.d.Id;
     } catch (error) {
       console.error("❌ Ошибка создания периода занятости:", error);
@@ -285,7 +285,7 @@ export async function updateWorkloadPeriod(periodId: number, period: WorkloadPer
             }
         });
 
-        console.log("✅ Период занятости обновлен.");
+        //console.log("✅ Период занятости обновлен.");
     } catch (error) {
         console.error("❌ Ошибка обновления периода занятости:", error);
         throw error;
@@ -306,7 +306,7 @@ export async function deleteWorkloadPeriod(periodId: number) {
             }
         });
 
-        console.log("✅ Период занятости отправлен в корзину.");
+        //console.log("✅ Период занятости отправлен в корзину.");
     } catch (error) {
         console.error("❌ Ошибка удаления периода занятости:", error);
         throw error;
@@ -320,7 +320,7 @@ export async function getWorkloadPeriods(): Promise<WorkloadPeriod[]> {
     const response = await apiClient.get("/web/lists/GetByTitle('WorkloadPeriods')/items", {
       headers: { Accept: "application/json;odata=verbose" },
     });
-    console.log("✅ Получены периоды занятости:", response.data);
+    //console.log("✅ Получены периоды занятости:", response.data);
 
     // Если вам нужны все данные, можно вернуть объект целиком,
     // либо, если требуется переименование ключей, например, чтобы привести их к вашему интерфейсу,

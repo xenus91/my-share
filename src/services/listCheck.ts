@@ -12,11 +12,11 @@ export async function ensureEmployeesListExists(): Promise<void> {
     await apiClient.get("/web/lists/GetByTitle('Employees')", {
       headers: { Accept: "application/json;odata=verbose" }
     });
-    console.log("✅ Список 'Employees' найден");
+    //console.log("✅ Список 'Employees' найден");
     listExists = true;
   } catch (error: any) {
     if (error.response && error.response.status === 404) {
-      console.log("❌ Список 'Employees' не найден. Создаем...");
+      //console.log("❌ Список 'Employees' не найден. Создаем...");
       try {
         const digest = await getRequestDigest();
         if (!digest) throw new Error("❌ Ошибка: X-RequestDigest не получен!");
@@ -36,7 +36,7 @@ export async function ensureEmployeesListExists(): Promise<void> {
             "X-RequestDigest": digest
           }
         });
-        console.log("✅ Список 'Employees' создан:", createListResponse.data);
+        //console.log("✅ Список 'Employees' создан:", createListResponse.data);
         listExists = true;
       } catch (createError) {
         console.error("❌ Ошибка создания списка 'Employees':", createError);
@@ -99,11 +99,11 @@ export async function ensureEmployeesListExists(): Promise<void> {
               "X-RequestDigest": digest
             }
           });
-          console.log(`✅ Поле '${field.Title}' добавлено.`);
+          //console.log(`✅ Поле '${field.Title}' добавлено.`);
         }
       }
 
-      console.log("✅ Все поля для 'Employees' проверены и добавлены, если отсутствовали.");
+      //console.log("✅ Все поля для 'Employees' проверены и добавлены, если отсутствовали.");
     } catch (fieldsError) {
       console.error("❌ Ошибка проверки/добавления полей для 'Employees':", fieldsError);
       throw fieldsError;
@@ -118,11 +118,11 @@ export async function ensureWorkloadPeriodsListExists(): Promise<void> {
     await apiClient.get("/web/lists/GetByTitle('WorkloadPeriods')", {
       headers: { Accept: "application/json;odata=verbose" }
     });
-    console.log("✅ Список 'WorkloadPeriods' найден");
+    //console.log("✅ Список 'WorkloadPeriods' найден");
     listExists = true;
   } catch (error: any) {
     if (error.response && error.response.status === 404) {
-      console.log("❌ Список 'WorkloadPeriods' не найден. Создаем...");
+      //console.log("❌ Список 'WorkloadPeriods' не найден. Создаем...");
       try {
         const digest = await getRequestDigest();
         if (!digest) throw new Error("❌ Ошибка: X-RequestDigest не получен!");
@@ -142,7 +142,7 @@ export async function ensureWorkloadPeriodsListExists(): Promise<void> {
             "X-RequestDigest": digest
           }
         });
-        console.log("✅ Список 'WorkloadPeriods' создан:", createListResponse.data);
+        //console.log("✅ Список 'WorkloadPeriods' создан:", createListResponse.data);
         listExists = true;
       } catch (createError) {
         console.error("❌ Ошибка создания списка 'WorkloadPeriods':", createError);
@@ -187,7 +187,7 @@ export async function ensureWorkloadPeriodsListExists(): Promise<void> {
               }
             }
           );
-          console.log(`✅ Поле '${field.Title}' добавлено.`);
+          //console.log(`✅ Поле '${field.Title}' добавлено.`);
         }
       }
   
@@ -217,10 +217,10 @@ export async function ensureWorkloadPeriodsListExists(): Promise<void> {
             "X-RequestDigest": digest
           },
         });
-        console.log("✅ Поле 'Employee' (Lookup) добавлено.");
+        //console.log("✅ Поле 'Employee' (Lookup) добавлено.");
       }
   
-      console.log("✅ Все поля для 'WorkloadPeriods' проверены и добавлены, если отсутствовали.");
+      //console.log("✅ Все поля для 'WorkloadPeriods' проверены и добавлены, если отсутствовали.");
     } catch (fieldsError) {
       console.error("❌ Ошибка проверки/добавления полей для 'WorkloadPeriods':", fieldsError);
       throw fieldsError;
@@ -236,11 +236,11 @@ export async function ensureShiftTypeListExists(): Promise<void> {
     await apiClient.get("/web/lists/GetByTitle('ShiftType')", {
       headers: { Accept: "application/json;odata=verbose" },
     });
-    console.log("✅ Список 'ShiftType' найден");
+    //console.log("✅ Список 'ShiftType' найден");
     listExists = true;
   } catch (error: any) {
     if (error.response && error.response.status === 404) {
-      console.log("❌ Список 'ShiftType' не найден. Создаем...");
+      //console.log("❌ Список 'ShiftType' не найден. Создаем...");
       try {
         const digest = await getRequestDigest();
         if (!digest) throw new Error("❌ Ошибка: X-RequestDigest не получен!");
@@ -261,7 +261,7 @@ export async function ensureShiftTypeListExists(): Promise<void> {
             "X-RequestDigest": digest,
           },
         });
-        console.log("✅ Список 'ShiftType' создан:", createListResponse.data);
+        //console.log("✅ Список 'ShiftType' создан:", createListResponse.data);
         listExists = true;
       } catch (createError) {
         console.error("❌ Ошибка создания списка 'ShiftType':", createError);
@@ -317,10 +317,10 @@ export async function ensureShiftTypeListExists(): Promise<void> {
               },
             }
           );
-          console.log(`✅ Поле '${field.Title}' добавлено.`);
+          //console.log(`✅ Поле '${field.Title}' добавлено.`);
         }
       }
-      console.log("✅ Все поля для 'ShiftType' проверены и добавлены, если отсутствовали.");
+      //console.log("✅ Все поля для 'ShiftType' проверены и добавлены, если отсутствовали.");
     } catch (fieldsError) {
       console.error("❌ Ошибка проверки/добавления полей для 'ShiftType':", fieldsError);
       throw fieldsError;
@@ -336,11 +336,11 @@ export async function ensureShiftsListExists(): Promise<void> {
     await apiClient.get("/web/lists/GetByTitle('Shifts')", {
       headers: { Accept: "application/json;odata=verbose" },
     });
-    console.log("✅ Список 'Shifts' найден");
+    //console.log("✅ Список 'Shifts' найден");
     listExists = true;
   } catch (error: any) {
     if (error.response && error.response.status === 404) {
-      console.log("❌ Список 'Shifts' не найден. Создаем...");
+      //console.log("❌ Список 'Shifts' не найден. Создаем...");
       try {
         const digest = await getRequestDigest();
         if (!digest) throw new Error("❌ Ошибка: X-RequestDigest не получен!");
@@ -365,7 +365,7 @@ export async function ensureShiftsListExists(): Promise<void> {
             },
           }
         );
-        console.log("✅ Список 'Shifts' создан:", createListResponse.data);
+        //console.log("✅ Список 'Shifts' создан:", createListResponse.data);
         listExists = true;
       } catch (createError) {
         console.error("❌ Ошибка создания списка 'Shifts':", createError);
@@ -425,7 +425,7 @@ for (const field of commonFields) {
         },
       }
     );
-    console.log(`✅ Поле '${field.Title}' добавлено.`);
+    //console.log(`✅ Поле '${field.Title}' добавлено.`);
   }
 }
 
@@ -459,7 +459,7 @@ for (const field of commonFields) {
             },
           }
         );
-        console.log("✅ Поле 'Employee' (Lookup) добавлено.");
+        //console.log("✅ Поле 'Employee' (Lookup) добавлено.");
       }
 
       // 3. Lookup-поле для типа смены (ShiftType)
@@ -492,10 +492,10 @@ for (const field of commonFields) {
             },
           }
         );
-        console.log("✅ Поле 'ShiftType' (Lookup) добавлено.");
+        //console.log("✅ Поле 'ShiftType' (Lookup) добавлено.");
       }
 
-      console.log("✅ Все поля для 'Shifts' добавлены.");
+      //console.log("✅ Все поля для 'Shifts' добавлены.");
     } catch (fieldsError) {
       console.error("❌ Ошибка проверки/добавления полей для 'Shifts':", fieldsError);
       throw fieldsError;
@@ -510,11 +510,11 @@ export async function ensureShiftPatternListExists(): Promise<void> {
     await apiClient.get("/web/lists/GetByTitle('ShiftPattern')", {
       headers: { Accept: "application/json;odata=verbose" },
     });
-    console.log("✅ Список 'ShiftPattern' найден");
+    //console.log("✅ Список 'ShiftPattern' найден");
     listExists = true;
   } catch (error: any) {
     if (error.response && error.response.status === 404) {
-      console.log("❌ Список 'ShiftPattern' не найден. Создаем...");
+      //console.log("❌ Список 'ShiftPattern' не найден. Создаем...");
       try {
         const digest = await getRequestDigest();
         if (!digest) throw new Error("❌ Ошибка: X-RequestDigest не получен!");
@@ -539,7 +539,7 @@ export async function ensureShiftPatternListExists(): Promise<void> {
             },
           }
         );
-        console.log("✅ Список 'ShiftPattern' создан:", createListResponse.data);
+        //console.log("✅ Список 'ShiftPattern' создан:", createListResponse.data);
         listExists = true;
       } catch (createError) {
         console.error("❌ Ошибка создания списка 'ShiftPattern':", createError);
@@ -590,10 +590,10 @@ export async function ensureShiftPatternListExists(): Promise<void> {
               },
             }
           );
-          console.log(`✅ Поле '${field.Title}' добавлено.`);
+          //console.log(`✅ Поле '${field.Title}' добавлено.`);
         }
       }
-      console.log("✅ Все поля для 'ShiftPattern' проверены и добавлены, если отсутствовали.");
+      //console.log("✅ Все поля для 'ShiftPattern' проверены и добавлены, если отсутствовали.");
     } catch (fieldsError) {
       console.error("❌ Ошибка проверки/добавления полей для 'ShiftPattern':", fieldsError);
       throw fieldsError;

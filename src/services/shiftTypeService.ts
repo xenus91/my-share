@@ -34,7 +34,7 @@ export async function createShiftType(shiftType: Omit<ShiftTypeDefinition, "ID">
             }
         );
 
-        console.log("✅ Тип смены создан:", response.data);
+        //console.log("✅ Тип смены создан:", response.data);
         return response.data.d.Id;
     } catch (error) {
         console.error("❌ Ошибка создания типа смены:", error);
@@ -71,7 +71,7 @@ export async function updateShiftType(shiftTypeId: number, shiftType: Omit<Shift
             }
         });
 
-        console.log("✅ Тип смены обновлен.");
+        //console.log("✅ Тип смены обновлен.");
     } catch (error) {
         console.error("❌ Ошибка обновления типа смены:", error);
         throw error;
@@ -91,7 +91,7 @@ export async function deleteShiftType(shiftTypeId: number) {
             }
         });
 
-        console.log("✅ Тип смены отправлен в корзину.");
+        //console.log("✅ Тип смены отправлен в корзину.");
     } catch (error) {
         console.error("❌ Ошибка удаления типа смены:", error);
         throw error;
@@ -125,7 +125,7 @@ export async function getShiftTypes(): Promise<ShiftTypeDefinition[]> {
         DefaultBreakEnd: item.DefaultBreakEnd,
       }));
   
-      console.log("✅ Получены типы смен:", items);
+      //console.log("✅ Получены типы смен:", items);
       return items;
     } catch (error) {
       console.error("❌ Ошибка получения типов смен:", error);
