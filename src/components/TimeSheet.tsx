@@ -38,7 +38,32 @@ import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import { AgGridReact } from 'ag-grid-react';
 import { ColDef, GridOptions, ICellRendererParams, ValueFormatterParams } from 'ag-grid-community';
-import { ClientSideRowModelModule } from 'ag-grid-community';
+import { ModuleRegistry } from 'ag-grid-community';
+import { 
+  ClientSideRowModelModule, 
+  RenderApiModule, 
+  RowSelectionModule,
+  TextFilterModule,
+  NumberFilterModule,
+  DateFilterModule,
+  CustomFilterModule,
+  CellStyleModule,
+  ValidationModule
+} from 'ag-grid-community';
+
+// Регистрируем необходимые модули:
+ModuleRegistry.registerModules([
+  ClientSideRowModelModule,
+  RenderApiModule,
+  RowSelectionModule,
+  TextFilterModule,
+  NumberFilterModule,
+  DateFilterModule,
+  CustomFilterModule,
+  CellStyleModule,
+  ValidationModule,
+]);
+
 import {
   format,
   startOfWeek,
@@ -71,6 +96,7 @@ import { ShiftDialog } from './ShiftDialog';
 import EmployeeHeaderWithFilter from './EmployeeHeaderWithFilter';
 
 
+
 type ViewPeriod = 'week' | 'month' | 'year';
 
 // Расширяем Employee, добавляя словарь смен
@@ -84,6 +110,7 @@ interface FilterState {
 }
 
 export default function TimeSheet() {
+  // Регистрируем необходимые модули
 
   // Добавляем состояние для фильтра сотрудников
   const [employeeFilter, setEmployeeFilter] = useState<{ field: string; value: string } | null>(null);
@@ -760,7 +787,13 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
       ),
       field: 'Title',
       filterValueGetter: (params) => params.data.Title,
-      width: 200,
+      valueFormatter: (params) => {
+        if (params.value && typeof params.value === 'object') {
+          return JSON.stringify(params.value);
+        }
+        return params.value;
+      },
+      width: 210,
       pinned: 'left',
       cellRenderer: 'employeeCellRenderer',
       sortable: true,
@@ -768,59 +801,73 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
       //filter: EmployeeFilter,  // стандартная текстовая фильтрация
       floatingFilter: false,          // отображение строки фильтра
     },
+// Колонка для "Часы Лента"
+{
+  headerName: "Часы ЛЕНТА",
+  field: "totalHours", // или можно вычислять через valueGetter, если значение не хранится напрямую
+  width: 120, // задаём подходящую ширину
+  pinned: 'left',
+  sortable: true,
+  suppressMovable: true,
+  filter: false,
+  cellRenderer: (params: any) => {
+    const { totalHours, totalHoursToDelete } = params.data;
+    return (
+      <div style={{ textAlign: "center" }}>
+        <span>
+          {totalHours}ч{" "}
+          {totalHoursToDelete > 0 && (
+            <>
+              (<VisibilityOffIcon style={{ fontSize: 14, color: "gray", marginRight: 2 }} />
+              {totalHoursToDelete}ч)
+            </>
+          )}
+        </span>
+      </div>
+    );
+  },
+},
+
+// Колонка для "Часы ГПХ"
+{
+  headerName: "Часы ГПХ",
+  field: "totalHoursCLW",
+  width: 110,
+  pinned: 'left',
+  sortable: true,
+  suppressMovable: true,
+  filter: false,
+  cellRenderer: (params: any) => {
+    const { totalHoursCLW, totalHoursCLWToDelete } = params.data;
+    return (
+      <div style={{ textAlign: "center" }}>
+        <span>
+          {totalHoursCLW}ч{" "}
+          {totalHoursCLWToDelete > 0 && (
+            <>
+              (<VisibilityOffIcon style={{ fontSize: 14, color: "gray", marginRight: 2 }} />
+              {totalHoursCLWToDelete}ч)
+            </>
+          )}
+        </span>
+      </div>
+    );
+  },
+},
     {
-      headerComponent: () => (
-        <div style={{ textAlign: "right", lineHeight: 1.2 }}>
-          <div>Всего часов</div>
-          <div style={{ fontSize: "0.8rem" }}>ЛЕНТА | ГПХ</div>
-        </div>
-      ),
-      field: "totalHours",
-      width: 220,
-      pinned: "left",
-      sortable: false,
-      suppressMovable: true,
-      cellRenderer: (params: any) => {
-        const { totalHours, totalHoursCLW, totalHoursToDelete, totalHoursCLWToDelete } = params.data;
-  
-        return (
-          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 6 }}>
-            {/* Основные часы */}
-            <span>
-              {totalHours}ч{" "}
-              {totalHoursToDelete > 0 && (
-                <>
-                  (<VisibilityOffIcon style={{ fontSize: 14, color: "gray", marginRight: 2 }} />
-                  {totalHoursToDelete}ч)
-                </>
-              )}
-            </span>
-            |
-            <span>
-              {totalHoursCLW}ч{" "}
-              {totalHoursCLWToDelete > 0 && (
-                <>
-                  (<VisibilityOffIcon style={{ fontSize: 14, color: "gray", marginRight: 2 }} />
-                  {totalHoursCLWToDelete}ч)
-                </>
-              )}
-            </span>
-          </div>
-        );
-      },
-    },
-    {
-      headerName: "Праздничные часы",
+      headerName: 'Праздничные часы',
       field: "holidayHours",
-      width: 180,
+      width: 120,
       pinned: "left",
-      sortable: false,
+      sortable: true,
+      filter: false,  
       suppressMovable: true,
+      headerClass: 'custom-header', // задаём CSS-класс для заголовка
       cellRenderer: (params: any) => {
         const { holidayHours, holidayHoursToDelete } = params.data;
   
         return (
-          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 6 }}>
+          <div style={{ textAlign: "center" }}>
             <span>{holidayHours}ч</span>
             {holidayHoursToDelete > 0 && (
               <>
@@ -833,23 +880,39 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
       },
     },
     {
-      headerName: 'Нормо часы',
+      headerName:'Нормо часы',
       field: 'normHours',
-      width: 120,
+      width: 110,
       pinned: 'left',
-      sortable: false,
+      sortable: true,
+      filter: false,  
       suppressMovable: true,
-      cellStyle: { textAlign: 'right', fontWeight: 'bold' },
+      headerClass: 'custom-header', // задаём CSS-класс для заголовка
+      cellStyle: { textAlign: 'center', fontWeight: 'bold' },
       valueFormatter: (params: ValueFormatterParams) => `${params.value}ч`,
     },
     {
-      headerName: 'Переработки/Недоработки',
+      headerName:'Переработки/Недоработки',
       field: 'overtimeUndertime',
-      width: 180,
+      width: 125,
       pinned: 'left',
-      sortable: false,
+      sortable: true,
+      filter: false,  
       suppressMovable: true,
-      cellStyle: { textAlign: 'right', fontWeight: 'bold' },
+      headerClass: 'custom-header', // задаём CSS-класс для заголовка
+      cellStyle: (params: any): any => {
+        const style: React.CSSProperties = { textAlign: "center", fontWeight: "bold" };
+        if (params.value != null) {
+          if (params.value < 0) {
+            // Если значение отрицательное, устанавливаем светло-оранжевый фон
+            style.backgroundColor = "#FFDAB9"; // либо задайте конкретный код цвета, например "#FFDAB9"
+          } else if (params.value > 0) {
+            // Если значение положительное, устанавливаем светло-красный фон
+            style.backgroundColor = "lightcoral"; // либо "#F08080"
+          }
+        }
+        return style;
+      },
       valueGetter: (params: any) => {
         const { totalHours, normHours, holidayHours } = params.data;
         if (totalHours - normHours < 0) {

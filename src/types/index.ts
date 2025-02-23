@@ -12,6 +12,7 @@ export interface WorkloadPeriod {
 // Элемент списка "Employees"
 export interface Employee {
   ID: number;           // уникальный числовой идентификатор из SharePoint
+  EmployeeID: string,
   Title: string;        // имя сотрудника (используем стандартное поле Title)
   JobTitle: string;     // должность сотрудника
   Department: string;

@@ -9,6 +9,7 @@ import { getRequestDigest } from './contextService';
 // Получение свойств пользователя по accountName
 export async function getUserPropertiesByAccountName(accountName: string): Promise<{
     preferredName: string;
+    employeeID: string;
     jobTitle: string;
     department: string;
     office: string;
@@ -31,6 +32,7 @@ export async function getUserPropertiesByAccountName(accountName: string): Promi
 
         return {
             preferredName: props["PreferredName"] || "",
+            employeeID: props["EmployeeID"] || "",
             jobTitle: props["SPS-JobTitle"] || "",
             department: props["Department"] || "",
             office: props["Office"] || ""
@@ -94,6 +96,7 @@ export async function getEmployee(): Promise<Employee[]> {
 // Создание сотрудника в списке "Employees"
 export async function createEmployee(payload: {
     preferredName: string;
+    EmployeeID: string;
     employeeId: string;
     jobTitle: string;
     department: string;
@@ -104,6 +107,7 @@ export async function createEmployee(payload: {
         const postPayload = {
             __metadata: { type: "SP.Data.EmployeesListItem" },
             Title: payload.preferredName,
+            EmployeeID: payload.EmployeeID,
             EmployeeId: payload.employeeId,
             JobTitle: payload.jobTitle,
             Department: payload.department,
@@ -135,6 +139,7 @@ export async function updateEmployee(
     spItemId: number,
     payload: {
       preferredName: string;
+      employeeID: string;
       jobTitle: string;
       department: string;
       office: string;
@@ -149,6 +154,7 @@ export async function updateEmployee(
       const updatePayload = {
         __metadata: { type: "SP.Data.EmployeesListItem" },
         Title: payload.preferredName,
+        EmployeeID: payload.employeeID,
         JobTitle: payload.jobTitle,
         Department: payload.department,
         Office: payload.office,

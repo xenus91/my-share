@@ -25,7 +25,7 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
-  const [themeMode] = useState<"light" | "dark">("light");
+  const [themeMode] = useState("light");
   const { isPending, isError, isSuccess, error } = useSetupLists();
   const [openDialog, setOpenDialog] = useState(true);
 

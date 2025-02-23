@@ -88,3 +88,11 @@
   border-radius: 5px !important;
   border: none !important;
 }
+
+.custom-header {
+  text-align: center;
+  white-space: normal;         /* Разрешает перенос строк */
+  overflow-wrap: break-word;   /* Переносит слово, если оно не помещается */
+  word-break: normal;          /* Запрещает разрыв внутри слова, если есть возможность переноса */
+  hyphens: auto;               /* Включает автоматическое расставление переносов (если браузер поддерживает) */
+}

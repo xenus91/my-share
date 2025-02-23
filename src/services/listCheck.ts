@@ -76,6 +76,11 @@ export async function ensureEmployeesListExists(): Promise<void> {
           Title: "Office",
           FieldTypeKind: 2,
           __metadata: { type: "SP.FieldText" }
+        },
+        {
+          Title: "EmployeeID",
+          FieldTypeKind: 2,
+          __metadata: { type: "SP.FieldText" }
         }
       ];
 

@@ -52,6 +52,7 @@ export function EmployeeDialog({
   // Состояние формы соответствует интерфейсу Employee (без поля ID)
   const [formData, setFormData] = useState({
     Title: "",
+    EmployeeID:"",
     JobTitle: "",
     Department: "",
     Office: "",
@@ -72,6 +73,7 @@ export function EmployeeDialog({
       setLookupEmployeeId(employee.ID);
       setFormData({
         Title: employee.Title,
+        EmployeeID: employee.EmployeeID,
         JobTitle: employee.JobTitle,
         Department: employee.Department,
         Office: employee.Office,
@@ -86,6 +88,7 @@ export function EmployeeDialog({
     } else {
       setFormData({
         Title: "",
+        EmployeeID:"",
         JobTitle: "",
         Department: "",
         Office: "",
@@ -189,6 +192,7 @@ export function EmployeeDialog({
         setFormData(prev => ({
           ...prev,
           Title: props.preferredName,
+          EmployeeID: props.employeeID,
           JobTitle: props.jobTitle,
           Department: props.department,
           Office: props.office,
@@ -219,6 +223,7 @@ export function EmployeeDialog({
         // ✅ Обновляем сотрудника
         await updateEmployee(employee.ID, {
           preferredName: formData.Title,
+          employeeID: formData.EmployeeID,
           jobTitle: formData.JobTitle,
           department: formData.Department,
           office: formData.Office,
@@ -230,6 +235,7 @@ export function EmployeeDialog({
         onSave({
           ...employee,
           Title: formData.Title,
+          EmployeeID:formData.EmployeeID,
           JobTitle: formData.JobTitle,
           Department: formData.Department,
           Office: formData.Office,
@@ -243,6 +249,7 @@ export function EmployeeDialog({
   
         const payload = {
           preferredName: formData.Title,
+          EmployeeID: formData.EmployeeID,
           employeeId: userId.toString(), // ✅ Преобразуем `userId` в `string`
           jobTitle: formData.JobTitle,
           department: formData.Department,
@@ -256,6 +263,7 @@ export function EmployeeDialog({
   
         onSave({
           ID: createdEmployee.ID,
+          EmployeeID:createdEmployee.EmployeeID,
           Title: createdEmployee.Title,
           JobTitle: createdEmployee.JobTitle,
           Department: createdEmployee.Department,
@@ -336,6 +344,16 @@ export function EmployeeDialog({
                   value={formData.JobTitle}
                   onChange={(e) =>
                     setFormData({ ...formData, JobTitle: e.target.value })
+                  }
+                  required
+                />
+                 <TextField
+                  label="EmployeeID"
+                  fullWidth
+                  margin="normal"
+                  value={formData.EmployeeID}
+                  onChange={(e) =>
+                    setFormData({ ...formData, EmployeeID: e.target.value })
                   }
                   required
                 />
