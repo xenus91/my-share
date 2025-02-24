@@ -39,9 +39,9 @@ import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import { AgGridReact } from 'ag-grid-react';
 import { ColDef, GridOptions, ICellRendererParams, ValueFormatterParams } from 'ag-grid-community';
 import { ModuleRegistry } from 'ag-grid-community';
-import { 
-  ClientSideRowModelModule, 
-  RenderApiModule, 
+import {
+  ClientSideRowModelModule,
+  RenderApiModule,
   RowSelectionModule,
   TextFilterModule,
   NumberFilterModule,
@@ -89,7 +89,7 @@ import { ShiftCellRenderer } from './ShiftCellRenderer';
 import { EmployeeDialog } from './EmployeeDialog';
 import { ShiftTypeDialog } from './ShiftTypeDialog';
 import { getEmployee, deleteEmployee, getWorkloadPeriods } from "../services/userService";
-import { createShiftType, deleteShiftType, getShiftTypes, updateShiftType } from "../services/shiftTypeService"; 
+import { createShiftType, deleteShiftType, getShiftTypes, updateShiftType } from "../services/shiftTypeService";
 import { createShift, deleteShift, getShiftById, getShifts, updateShift } from '../services/shiftService';
 import { createShiftPattern, deleteShiftPattern, getShiftPatterns, updateShiftPattern } from '../services/shiftPatternService';
 import { ShiftDialog } from './ShiftDialog';
@@ -111,10 +111,14 @@ interface FilterState {
 
 export default function TimeSheet() {
   // Регистрируем необходимые модули
+  const [employeeSort, setEmployeeSort] = useState<{ field: string; order: 'asc' | 'desc' | null }>({
+    field: 'Title',
+    order: null,
+  });
 
   // Добавляем состояние для фильтра сотрудников
   const [employeeFilter, setEmployeeFilter] = useState<{ field: string; value: string[] } | null>(null);
-   // Состояние для фильтрации по дате/типу смены
+  // Состояние для фильтрации по дате/типу смены
   const [activeFilter, setActiveFilter] = useState<FilterState | null>(null);
   const gridRef = useRef<AgGridReact>(null);
   // Состояния для диалогов управления чередованиями
@@ -134,13 +138,13 @@ export default function TimeSheet() {
   // END BULK MODE
 
 
-    // menu: состояние бокового меню для управления чередованием
-    const [sideMenuOpen, setSideMenuOpen] = useState(false);
-    const toggleSideMenu = () => {
-      setSideMenuOpen(!sideMenuOpen);
-    };
+  // menu: состояние бокового меню для управления чередованием
+  const [sideMenuOpen, setSideMenuOpen] = useState(false);
+  const toggleSideMenu = () => {
+    setSideMenuOpen(!sideMenuOpen);
+  };
 
-// Загрузка паттернов смен
+  // Загрузка паттернов смен
   useEffect(() => {
     async function loadShiftPatterns() {
       try {
@@ -153,7 +157,7 @@ export default function TimeSheet() {
     }
     loadShiftPatterns();
   }, []);
-  
+
 
 
   // Загрузка сотрудников и периодов занятости
@@ -167,14 +171,14 @@ export default function TimeSheet() {
         ]);
         //console.log("✅ Загружены сотрудники:", employees);
         //console.log("✅ Загружены периоды занятости:", periods);
-  
+
         // Для каждого сотрудника фильтруем периоды, соответствующие его ID
         const entries: TimeSheetEntry[] = employees.map((emp: Employee) => ({
           ...emp,
           shifts: {},
           workloadPeriods: periods.filter((p) => p.EmployeeId === emp.ID) || [],
         }));
-  
+
         setTimeData(entries);
       } catch (error) {
         console.error("❌ Ошибка загрузки сотрудников или периодов занятости:", error);
@@ -186,7 +190,7 @@ export default function TimeSheet() {
   // Типы смен (ID — число)
   const [shiftTypes, setShiftTypes] = useState<ShiftTypeDefinition[]>([]);
 
- 
+
 
   // Загрузка типов смен
   useEffect(() => {
@@ -204,13 +208,13 @@ export default function TimeSheet() {
 
   // Список сотрудников. ID — число
   const [timeData, setTimeData] = useState<TimeSheetEntry[]>([
-   
+
   ]);
 
   useEffect(() => {
     // Если сотрудников ещё нет, ничего не делаем.
     if (timeData.length === 0) return;
-  
+
     async function loadShifts() {
       try {
         const shifts = await getShifts();
@@ -246,55 +250,55 @@ export default function TimeSheet() {
     }
     loadShifts();
   }, [timeData.length]); // зависимость от количества сотрудников
-  
 
- // ===========================
-// Shift Pattern management
-// ===========================
-// Создание нового паттерна
-const handleSavePattern = async (pattern: ShiftPattern): Promise<void> => {
-  if (pattern.ID === 0) {
-    const patternData = {
-      Name: pattern.Name,
-      Pattern: pattern.Pattern,
-    };
-    try {
-      const newId = await createShiftPattern(patternData);
-      const newPattern: ShiftPattern = { ...pattern, ID: newId };
-      setShiftPatterns((prev) => [...prev, newPattern]);
-    } catch (error) {
-      console.error("Ошибка создания паттерна:", error);
+
+  // ===========================
+  // Shift Pattern management
+  // ===========================
+  // Создание нового паттерна
+  const handleSavePattern = async (pattern: ShiftPattern): Promise<void> => {
+    if (pattern.ID === 0) {
+      const patternData = {
+        Name: pattern.Name,
+        Pattern: pattern.Pattern,
+      };
+      try {
+        const newId = await createShiftPattern(patternData);
+        const newPattern: ShiftPattern = { ...pattern, ID: newId };
+        setShiftPatterns((prev) => [...prev, newPattern]);
+      } catch (error) {
+        console.error("Ошибка создания паттерна:", error);
+      }
     }
-  }
-};
+  };
 
-// Обновление существующего паттерна
-const handleUpdatePattern = async (pattern: ShiftPattern): Promise<void> => {
-  if (pattern.ID !== 0) {
-    const patternData = {
-      Name: pattern.Name,
-      Pattern: pattern.Pattern,
-    };
-    try {
-      await updateShiftPattern(pattern.ID, patternData);
-      setShiftPatterns((prev) =>
-        prev.map((p) => (p.ID === pattern.ID ? pattern : p))
-      );
-    } catch (error) {
-      console.error("Ошибка обновления паттерна:", error);
+  // Обновление существующего паттерна
+  const handleUpdatePattern = async (pattern: ShiftPattern): Promise<void> => {
+    if (pattern.ID !== 0) {
+      const patternData = {
+        Name: pattern.Name,
+        Pattern: pattern.Pattern,
+      };
+      try {
+        await updateShiftPattern(pattern.ID, patternData);
+        setShiftPatterns((prev) =>
+          prev.map((p) => (p.ID === pattern.ID ? pattern : p))
+        );
+      } catch (error) {
+        console.error("Ошибка обновления паттерна:", error);
+      }
     }
-  }
-};
+  };
 
-// Удаление паттерна
-const handleDeletePattern = async (patternId: number): Promise<void> => {
-  try {
-    await deleteShiftPattern(patternId);
-    setShiftPatterns((prev) => prev.filter((p) => p.ID !== patternId));
-  } catch (error) {
-    console.error("Ошибка удаления паттерна:", error);
-  }
-};
+  // Удаление паттерна
+  const handleDeletePattern = async (patternId: number): Promise<void> => {
+    try {
+      await deleteShiftPattern(patternId);
+      setShiftPatterns((prev) => prev.filter((p) => p.ID !== patternId));
+    } catch (error) {
+      console.error("Ошибка удаления паттерна:", error);
+    }
+  };
 
 
   // ===========================
@@ -317,7 +321,7 @@ const handleDeletePattern = async (patternId: number): Promise<void> => {
         shiftType.DefaultBreakStart,
         shiftType.DefaultBreakEnd,
         shiftType.RequiredStartEndTime ?? true
-      );      
+      );
       handleAddShift(
         parseInt(employeeId, 10),
         date,
@@ -420,7 +424,7 @@ const handleDeletePattern = async (patternId: number): Promise<void> => {
     };
     setTimeData((prev) => [...prev, newEmployee]);
   };
-  
+
 
   const handleUpdateEmployee = (ID: number, employeeData: Omit<Employee, 'ID'>) => {
     setTimeData((prev) =>
@@ -446,185 +450,185 @@ const handleDeletePattern = async (patternId: number): Promise<void> => {
       console.error("❌ Ошибка при удалении сотрудника:", error);
     }
   };
-  
-
- // ===========================
-// ShiftType management
-// ===========================
-const handleAddShiftType = async (
-  shiftTypeData: Omit<ShiftTypeDefinition, 'ID'>
-): Promise<void> => {
-  try {
-    // Вызываем сервис создания типа смены, который возвращает новый ID из SharePoint
-    const newId = await createShiftType(shiftTypeData);
-    const newShiftType: ShiftTypeDefinition = {
-      ...shiftTypeData,
-      ID: newId,
-    };
-    setShiftTypes((prev) => [...prev, newShiftType]);
-  } catch (error) {
-    console.error("Ошибка создания типа смены:", error);
-  }
-};
-
-const handleUpdateShiftType = async (
-  ID: number,
-  shiftTypeData: Omit<ShiftTypeDefinition, 'ID'>
-): Promise<void> => {
-  try {
-    await updateShiftType(ID, shiftTypeData);
-    setShiftTypes((prev) =>
-      prev.map((type) => (type.ID === ID ? { ...shiftTypeData, ID } : type))
-    );
-  } catch (error) {
-    console.error("Ошибка обновления типа смены:", error);
-  }
-};
-
-const handleDeleteShiftType = async (ID: number): Promise<void> => {
-  // Проверяем, используется ли тип смены
-  const isInUse = timeData.some((employee) =>
-    Object.values(employee.shifts).flat().some((shift) => shift.ShiftTypeId === ID)
-  );
-  if (isInUse) {
-    alert("Нельзя удалить тип смены, который уже используется");
-    return;
-  }
-  try {
-    await deleteShiftType(ID);
-    setShiftTypes((prev) => prev.filter((type) => type.ID !== ID));
-  } catch (error) {
-    console.error("Ошибка удаления типа смены:", error);
-  }
-};
 
 
- // ===========================
-// Shifts management
-// ===========================
-
-// Добавить смену
-const handleAddShift = async (
-  employeeId: number,
-  date: string,
-  shiftData: Omit<Shift, 'ID'>
-): Promise<void> => {
-  try {
-    // Создаем смену через сервис, получая новый ID из SharePoint
-    const newId = await createShift(shiftData);
-    const newShift: Shift = {
-      ...shiftData,
-      ID: newId,
-    };
-    setTimeData((prevData) =>
-      prevData.map((employee) => {
-        if (employee.ID === employeeId) {
-          return {
-            ...employee,
-            shifts: {
-              ...employee.shifts,
-              [date]: [...(employee.shifts[date] || []), newShift],
-            },
-          };
-        }
-        return employee;
-      })
-    );
-  } catch (error) {
-    console.error("Ошибка при добавлении смены:", error);
-  }
-};
-
-// Обновить смену
-// Обновить смену
-const handleUpdateShift = async (
-  employeeId: number,
-  date: string,
-  shiftId: number,
-  shiftData: Omit<Shift, "ID" | "EmployeeId" | "Date">
-): Promise<void> => {
-  try {
-    await updateShift(shiftId, shiftData);
-     // Загружаем обновленные данные после изменения
-     const updatedShift = await getShiftById(shiftId);
-
-     setTimeData((prevData) =>
-       prevData.map((employee) =>
-         employee.ID === employeeId
-           ? {
-               ...employee,
-               shifts: {
-                 ...employee.shifts,
-                 [date]: employee.shifts[date].map((shift) =>
-                   shift.ID === shiftId ? updatedShift : shift
-                 ),
-               },
-             }
-           : employee
-       )
-     );
-   } catch (error) {
-     console.error("❌ Ошибка при обновлении смены:", error);
-   }
- };
-
-// Удалить смену
-const handleDeleteShift = async (
-  employeeId: number,
-  date: string,
-  shiftId: number
-): Promise<void> => {
-  try {
-    await deleteShift(shiftId);
-    setTimeData((prevData) =>
-      prevData.map((employee) => {
-        if (employee.ID === employeeId) {
-          return {
-            ...employee,
-            shifts: {
-              ...employee.shifts,
-              [date]: employee.shifts[date].filter((s) => s.ID !== shiftId),
-            },
-          };
-        }
-        return employee;
-      })
-    );
-  } catch (error) {
-    console.error("Ошибка при удалении смены:", error);
-  }
-};
- // BEGIN BULK MODE: глобальное переключение режима и управление выбранными сменами
- const toggleBulkSelection = (employeeId: number, date: string, shiftId: number) => {
-  setBulkSelectedShifts((prev) => {
-    const exists = prev.some(
-      (item) => item.employeeId === employeeId && item.date === date && item.shiftId === shiftId
-    );
-    if (exists) {
-      return prev.filter(
-        (item) => !(item.employeeId === employeeId && item.date === date && item.shiftId === shiftId)
-      );
-    } else {
-      return [...prev, { employeeId, date, shiftId }];
+  // ===========================
+  // ShiftType management
+  // ===========================
+  const handleAddShiftType = async (
+    shiftTypeData: Omit<ShiftTypeDefinition, 'ID'>
+  ): Promise<void> => {
+    try {
+      // Вызываем сервис создания типа смены, который возвращает новый ID из SharePoint
+      const newId = await createShiftType(shiftTypeData);
+      const newShiftType: ShiftTypeDefinition = {
+        ...shiftTypeData,
+        ID: newId,
+      };
+      setShiftTypes((prev) => [...prev, newShiftType]);
+    } catch (error) {
+      console.error("Ошибка создания типа смены:", error);
     }
-  });
-};
+  };
 
-const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => {
-  bulkSelectedShifts.forEach((item) => {
-    handleUpdateShift(item.employeeId, item.date, item.shiftId, data);
-  });
-  setBulkEditDialogOpen(false);
-  setBulkSelectedShifts([]);
-};
-// END BULK MODE
+  const handleUpdateShiftType = async (
+    ID: number,
+    shiftTypeData: Omit<ShiftTypeDefinition, 'ID'>
+  ): Promise<void> => {
+    try {
+      await updateShiftType(ID, shiftTypeData);
+      setShiftTypes((prev) =>
+        prev.map((type) => (type.ID === ID ? { ...shiftTypeData, ID } : type))
+      );
+    } catch (error) {
+      console.error("Ошибка обновления типа смены:", error);
+    }
+  };
+
+  const handleDeleteShiftType = async (ID: number): Promise<void> => {
+    // Проверяем, используется ли тип смены
+    const isInUse = timeData.some((employee) =>
+      Object.values(employee.shifts).flat().some((shift) => shift.ShiftTypeId === ID)
+    );
+    if (isInUse) {
+      alert("Нельзя удалить тип смены, который уже используется");
+      return;
+    }
+    try {
+      await deleteShiftType(ID);
+      setShiftTypes((prev) => prev.filter((type) => type.ID !== ID));
+    } catch (error) {
+      console.error("Ошибка удаления типа смены:", error);
+    }
+  };
+
+
+  // ===========================
+  // Shifts management
+  // ===========================
+
+  // Добавить смену
+  const handleAddShift = async (
+    employeeId: number,
+    date: string,
+    shiftData: Omit<Shift, 'ID'>
+  ): Promise<void> => {
+    try {
+      // Создаем смену через сервис, получая новый ID из SharePoint
+      const newId = await createShift(shiftData);
+      const newShift: Shift = {
+        ...shiftData,
+        ID: newId,
+      };
+      setTimeData((prevData) =>
+        prevData.map((employee) => {
+          if (employee.ID === employeeId) {
+            return {
+              ...employee,
+              shifts: {
+                ...employee.shifts,
+                [date]: [...(employee.shifts[date] || []), newShift],
+              },
+            };
+          }
+          return employee;
+        })
+      );
+    } catch (error) {
+      console.error("Ошибка при добавлении смены:", error);
+    }
+  };
+
+  // Обновить смену
+  // Обновить смену
+  const handleUpdateShift = async (
+    employeeId: number,
+    date: string,
+    shiftId: number,
+    shiftData: Omit<Shift, "ID" | "EmployeeId" | "Date">
+  ): Promise<void> => {
+    try {
+      await updateShift(shiftId, shiftData);
+      // Загружаем обновленные данные после изменения
+      const updatedShift = await getShiftById(shiftId);
+
+      setTimeData((prevData) =>
+        prevData.map((employee) =>
+          employee.ID === employeeId
+            ? {
+              ...employee,
+              shifts: {
+                ...employee.shifts,
+                [date]: employee.shifts[date].map((shift) =>
+                  shift.ID === shiftId ? updatedShift : shift
+                ),
+              },
+            }
+            : employee
+        )
+      );
+    } catch (error) {
+      console.error("❌ Ошибка при обновлении смены:", error);
+    }
+  };
+
+  // Удалить смену
+  const handleDeleteShift = async (
+    employeeId: number,
+    date: string,
+    shiftId: number
+  ): Promise<void> => {
+    try {
+      await deleteShift(shiftId);
+      setTimeData((prevData) =>
+        prevData.map((employee) => {
+          if (employee.ID === employeeId) {
+            return {
+              ...employee,
+              shifts: {
+                ...employee.shifts,
+                [date]: employee.shifts[date].filter((s) => s.ID !== shiftId),
+              },
+            };
+          }
+          return employee;
+        })
+      );
+    } catch (error) {
+      console.error("Ошибка при удалении смены:", error);
+    }
+  };
+  // BEGIN BULK MODE: глобальное переключение режима и управление выбранными сменами
+  const toggleBulkSelection = (employeeId: number, date: string, shiftId: number) => {
+    setBulkSelectedShifts((prev) => {
+      const exists = prev.some(
+        (item) => item.employeeId === employeeId && item.date === date && item.shiftId === shiftId
+      );
+      if (exists) {
+        return prev.filter(
+          (item) => !(item.employeeId === employeeId && item.date === date && item.shiftId === shiftId)
+        );
+      } else {
+        return [...prev, { employeeId, date, shiftId }];
+      }
+    });
+  };
+
+  const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => {
+    bulkSelectedShifts.forEach((item) => {
+      handleUpdateShift(item.employeeId, item.date, item.shiftId, data);
+    });
+    setBulkEditDialogOpen(false);
+    setBulkSelectedShifts([]);
+  };
+  // END BULK MODE
 
 
   // ===========================
   // AgGrid: row data
   // ===========================
   const rows = useMemo(() => {
-    return timeData
+    const filteredRows = timeData
     .filter((employee) => {
       if (!employeeFilter || !employeeFilter.value || employeeFilter.value.length === 0) {
         return true;
@@ -632,7 +636,6 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
       const field = employeeFilter.field;
       const fieldValue = (employee as any)[field];
       if (typeof fieldValue !== 'string') return false;
-      // Фильтруем, если значение поля совпадает (без учета регистра) с хотя бы одним выбранным значением
       return employeeFilter.value.some(
         (option: string) => fieldValue.toLowerCase() === option.toLowerCase()
       );
@@ -658,7 +661,7 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
             return shiftType && !shiftType.CivilLawContract ? s + shift.Hours : s;
           }, 0);
         }, 0);
-        
+
         const totalHoursCLW = days.reduce((sum: number, day: Date) => {
           const dateStr = format(day, "yyyy-MM-dd");
           const shifts = employee.shifts[dateStr] || [];
@@ -670,7 +673,7 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
             return shiftType?.CivilLawContract ? s + shift.Hours : s;
           }, 0);
         }, 0);
-        
+
         const holidayHours = days.reduce((sum: number, day: Date) => {
           const dateStr = format(day, "yyyy-MM-dd");
           const shifts = employee.shifts[dateStr] || [];
@@ -691,7 +694,7 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
             return shiftType && !shiftType.CivilLawContract ? s + shift.Hours : s;
           }, 0);
         }, 0);
-        
+
         const totalHoursCLWToDelete = days.reduce((sum: number, day: Date) => {
           const dateStr = format(day, "yyyy-MM-dd");
           const shifts = employee.shifts[dateStr] || [];
@@ -703,7 +706,7 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
             return shiftType?.CivilLawContract ? s + shift.Hours : s;
           }, 0);
         }, 0);
-        
+
         const holidayHoursToDelete = days.reduce((sum: number, day: Date) => {
           const dateStr = format(day, "yyyy-MM-dd");
           const shifts = employee.shifts[dateStr] || [];
@@ -712,15 +715,15 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
             return s + calculateHolidayHours(shift);
           }, 0);
         }, 0);
-        
-  
+
+
         const normHours = days.reduce((sum: number, day: Date) => {
           const today = new Date();
           const endOfCurrentMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        
+
           // Если режим "Год" — ограничиваем расчёт текущим месяцем
           if (viewPeriod === "year" && day > endOfCurrentMonth) return sum;
-        
+
           let dayNorm = getDayNorm(day);
           const dateStr = format(day, "yyyy-MM-dd");
           const shifts = employee.shifts[dateStr] || [];
@@ -728,9 +731,9 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
             const shiftType = shiftTypes.find((type) => type.ID === Number(shift.ShiftTypeId));
             return shiftType?.AffectsWorkingNorm;
           });
-        
+
           if (hasAffectingShift) return sum;
-        
+
           let fraction = 1;
           const workloadPeriods = employee.workloadPeriods ?? [];
           for (const period of workloadPeriods) {
@@ -741,12 +744,12 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
               fraction = period.Fraction;
             }
           }
-        
+
           dayNorm *= fraction;
           return sum + dayNorm;
         }, 0);
-        
-  
+
+
         const row: any = {
           ID: employee.ID,
           employeeId: employee.ID,
@@ -763,7 +766,7 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
           holidayHoursToDelete, // Добавляем
           normHours,
         };
-  
+
         days.forEach((day) => {
           const formattedDate = format(day, "yyyy-MM-dd");
           const shifts = employee.shifts[formattedDate] || [];
@@ -773,12 +776,25 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
             shifts,
           };
         });
-  
+
         return row;
       });
-  }, [timeData,employeeFilter, days, shiftTypes, activeFilter]);
-  
-  
+      // Сортировка, если установлен порядок
+  if (employeeSort.order) {
+    filteredRows.sort((a, b) => {
+      let aVal = a[employeeSort.field] || "";
+      let bVal = b[employeeSort.field] || "";
+      if (typeof aVal === "string") aVal = aVal.toLowerCase();
+      if (typeof bVal === "string") bVal = bVal.toLowerCase();
+      if (aVal < bVal) return employeeSort.order === 'asc' ? -1 : 1;
+      if (aVal > bVal) return employeeSort.order === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+  return filteredRows;
+  }, [timeData, employeeFilter, days, shiftTypes, activeFilter, employeeSort ]);
+
+
 
   // ===========================
   // AgGrid: column defs
@@ -790,7 +806,8 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
         <EmployeeHeaderWithFilter
           {...params}
           onFilterChange={setEmployeeFilter}
-          employees={timeData} // Здесь передаём данные сотрудников для вычисления уникальных значений
+          onSortChange={setEmployeeSort}  // передаём обновление сортировки
+          employees={timeData}
         />
       ),
       field: 'Title',
@@ -809,71 +826,71 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
       //filter: EmployeeFilter,  // стандартная текстовая фильтрация
       floatingFilter: false,          // отображение строки фильтра
     },
-// Колонка для "Часы Лента"
-{
-  headerName: "Часы ЛЕНТА",
-  field: "totalHours", // или можно вычислять через valueGetter, если значение не хранится напрямую
-  width: 120, // задаём подходящую ширину
-  pinned: 'left',
-  sortable: true,
-  suppressMovable: true,
-  filter: false,
-  cellRenderer: (params: any) => {
-    const { totalHours, totalHoursToDelete } = params.data;
-    return (
-      <div style={{ textAlign: "center" }}>
-        <span>
-          {totalHours}ч{" "}
-          {totalHoursToDelete > 0 && (
-            <>
-              (<VisibilityOffIcon style={{ fontSize: 14, color: "gray", marginRight: 2 }} />
-              {totalHoursToDelete}ч)
-            </>
-          )}
-        </span>
-      </div>
-    );
-  },
-},
+    // Колонка для "Часы Лента"
+    {
+      headerName: "Часы ЛЕНТА",
+      field: "totalHours", // или можно вычислять через valueGetter, если значение не хранится напрямую
+      width: 120, // задаём подходящую ширину
+      pinned: 'left',
+      sortable: true,
+      suppressMovable: true,
+      filter: false,
+      cellRenderer: (params: any) => {
+        const { totalHours, totalHoursToDelete } = params.data;
+        return (
+          <div style={{ textAlign: "center" }}>
+            <span>
+              {totalHours}ч{" "}
+              {totalHoursToDelete > 0 && (
+                <>
+                  (<VisibilityOffIcon style={{ fontSize: 14, color: "gray", marginRight: 2 }} />
+                  {totalHoursToDelete}ч)
+                </>
+              )}
+            </span>
+          </div>
+        );
+      },
+    },
 
-// Колонка для "Часы ГПХ"
-{
-  headerName: "Часы ГПХ",
-  field: "totalHoursCLW",
-  width: 110,
-  pinned: 'left',
-  sortable: true,
-  suppressMovable: true,
-  filter: false,
-  cellRenderer: (params: any) => {
-    const { totalHoursCLW, totalHoursCLWToDelete } = params.data;
-    return (
-      <div style={{ textAlign: "center" }}>
-        <span>
-          {totalHoursCLW}ч{" "}
-          {totalHoursCLWToDelete > 0 && (
-            <>
-              (<VisibilityOffIcon style={{ fontSize: 14, color: "gray", marginRight: 2 }} />
-              {totalHoursCLWToDelete}ч)
-            </>
-          )}
-        </span>
-      </div>
-    );
-  },
-},
+    // Колонка для "Часы ГПХ"
+    {
+      headerName: "Часы ГПХ",
+      field: "totalHoursCLW",
+      width: 110,
+      pinned: 'left',
+      sortable: true,
+      suppressMovable: true,
+      filter: false,
+      cellRenderer: (params: any) => {
+        const { totalHoursCLW, totalHoursCLWToDelete } = params.data;
+        return (
+          <div style={{ textAlign: "center" }}>
+            <span>
+              {totalHoursCLW}ч{" "}
+              {totalHoursCLWToDelete > 0 && (
+                <>
+                  (<VisibilityOffIcon style={{ fontSize: 14, color: "gray", marginRight: 2 }} />
+                  {totalHoursCLWToDelete}ч)
+                </>
+              )}
+            </span>
+          </div>
+        );
+      },
+    },
     {
       headerName: 'Праздничные часы',
       field: "holidayHours",
       width: 120,
       pinned: "left",
       sortable: true,
-      filter: false,  
+      filter: false,
       suppressMovable: true,
       headerClass: 'custom-header', // задаём CSS-класс для заголовка
       cellRenderer: (params: any) => {
         const { holidayHours, holidayHoursToDelete } = params.data;
-  
+
         return (
           <div style={{ textAlign: "center" }}>
             <span>{holidayHours}ч</span>
@@ -888,24 +905,24 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
       },
     },
     {
-      headerName:'Нормо часы',
+      headerName: 'Нормо часы',
       field: 'normHours',
       width: 110,
       pinned: 'left',
       sortable: true,
-      filter: false,  
+      filter: false,
       suppressMovable: true,
       headerClass: 'custom-header', // задаём CSS-класс для заголовка
       cellStyle: { textAlign: 'center', fontWeight: 'bold' },
       valueFormatter: (params: ValueFormatterParams) => `${params.value}ч`,
     },
     {
-      headerName:'Переработки/Недоработки',
+      headerName: 'Переработки/Недоработки',
       field: 'overtimeUndertime',
       width: 125,
       pinned: 'left',
       sortable: true,
-      filter: false,  
+      filter: false,
       suppressMovable: true,
       headerClass: 'custom-header', // задаём CSS-класс для заголовка
       cellStyle: (params: any): any => {
@@ -950,7 +967,7 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
           (calDay: CalendarDay) =>
             calDay.Date === formattedDate && calDay.Type === "пп"
         );
-  
+
         // Подсчитываем количество смен каждого типа для данного дня
         const countsForDay: { [key: number]: number } = {};
         shiftTypes.forEach((st) => {
@@ -964,7 +981,7 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
             }
           });
         });
-  
+
         return {
           headerName: `${format(day, "EEEEEE", { locale: ru })}\n${format(
             day,
@@ -982,11 +999,11 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
             handleAddShift,
             handleUpdateShift,
             handleDeleteShift,
-             // BEGIN BULK MODE: передаём функции bulkMode в ShiftCellRenderer
-          bulkMode,
-          bulkSelectedShifts,
-          toggleBulkSelection,
-          // END BULK MODE
+            // BEGIN BULK MODE: передаём функции bulkMode в ShiftCellRenderer
+            bulkMode,
+            bulkSelectedShifts,
+            toggleBulkSelection,
+            // END BULK MODE
           },
           headerComponent: () => {
             const isFilterActive = activeFilter?.date === formattedDate;
@@ -1038,7 +1055,7 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
                     pr: 1,
                   }}
                 >
-                  
+
                   {shiftTypes
                     .filter((type) => countsForDay[type.ID] > 0)
                     .map((type) => {
@@ -1083,7 +1100,7 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
       }),
     [days, shiftTypes, timeData, activeFilter, bulkMode, bulkSelectedShifts]
   );
-  
+
 
   const allColumns: ColDef[] = useMemo(
     () => [...fixedColumns, ...dynamicColumns],
@@ -1105,14 +1122,14 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
         const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
         const employee = params.data as TimeSheetEntry;
         if (!employee) return null;
-      
+
         const handleMenuOpen = (e: React.MouseEvent<HTMLButtonElement>) => {
           e.stopPropagation();
           setMenuAnchorEl(e.currentTarget);
         };
-      
+
         const handleMenuClose = () => setMenuAnchorEl(null);
-      
+
         return (
           <Box
             sx={{
@@ -1141,7 +1158,7 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
             >
               <ManageAccountsIcon style={{ height: 24, width: 24 }} />
             </Button>
-      
+
             {/* Информация о сотруднике */}
             <Box>
               <Typography variant="subtitle1">{employee.Title}</Typography>
@@ -1149,7 +1166,7 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
                 {employee.JobTitle}
               </Typography>
             </Box>
-      
+
             <Menu anchorEl={menuAnchorEl} open={Boolean(menuAnchorEl)} onClose={handleMenuClose}>
               <MenuItem
                 onClick={(e) => {
@@ -1158,8 +1175,8 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
                   handleMenuClose();
                 }}
                 sx={{ color: "#267db1" }}>
-               <EditIcon fontSize="small" sx={{ mr: 1 }} />
-               Изменить
+                <EditIcon fontSize="small" sx={{ mr: 1 }} />
+                Изменить
               </MenuItem>
               <MenuItem
                 onClick={() => {
@@ -1167,11 +1184,11 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
                   handleMenuClose();
                 }}
                 sx={{ color: "error.main" }}>
-                     <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
-                     Удалить
+                <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+                Удалить
               </MenuItem>
             </Menu>
-      
+
             <EmployeeDialog
               open={dialogOpen}
               onOpenChange={setDialogOpen}
@@ -1218,25 +1235,25 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
   const handleTopMenuClose = () => {
     setMenuAnchorEl(null);
   };*/
-// BEGIN BULK MODE: Обработчики для режима массовых операций
-const toggleBulkMode = () => {
-  setBulkMode(!bulkMode);
-  // При отключении режима сбрасываем выбранные смены
-  if (bulkMode) setBulkSelectedShifts([]);
-};
+  // BEGIN BULK MODE: Обработчики для режима массовых операций
+  const toggleBulkMode = () => {
+    setBulkMode(!bulkMode);
+    // При отключении режима сбрасываем выбранные смены
+    if (bulkMode) setBulkSelectedShifts([]);
+  };
 
-const handleBulkDelete = () => {
-  bulkSelectedShifts.forEach((item) => {
-    handleDeleteShift(item.employeeId, item.date, item.shiftId);
-  });
-  setBulkSelectedShifts([]);
-};
+  const handleBulkDelete = () => {
+    bulkSelectedShifts.forEach((item) => {
+      handleDeleteShift(item.employeeId, item.date, item.shiftId);
+    });
+    setBulkSelectedShifts([]);
+  };
 
-const handleBulkEdit = () => {
-  setBulkEditDialogOpen(true);
-};
+  const handleBulkEdit = () => {
+    setBulkEditDialogOpen(true);
+  };
 
-// END BULK MODE
+  // END BULK MODE
 
 
   // ===========================
@@ -1258,104 +1275,104 @@ const handleBulkEdit = () => {
         action={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
 
-           {/* BEGIN BULK MODE: Кнопка bulkMode */}
-           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Button
-              variant="outlined"
-              onClick={toggleBulkMode}
-              startIcon={bulkMode ? <LibraryAddCheckIcon /> : <LibraryAddCheckOutlinedIcon />}
-            >
-              Массовое измение
-            </Button>
-            {bulkMode && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Button variant="outlined" onClick={handleBulkEdit} startIcon={<EditIcon />} />
-                <Button variant="outlined" onClick={handleBulkDelete} startIcon={<DeleteIcon />} />
-              </Box>
-            )}
-           </Box>
-           {/* END BULK MODE */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FormControl size="small" sx={{ minWidth: 180 }}>
-              <InputLabel id="view-period-label">Период</InputLabel>
-              <Select
-                labelId="view-period-label"
-                value={viewPeriod}
-                label="Период"
-                onChange={(e) => setViewPeriod(e.target.value as ViewPeriod)}
+            {/* BEGIN BULK MODE: Кнопка bulkMode */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Button
+                variant="outlined"
+                onClick={toggleBulkMode}
+                startIcon={bulkMode ? <LibraryAddCheckIcon /> : <LibraryAddCheckOutlinedIcon />}
               >
-                <MenuItem value="week">Неделя</MenuItem>
-                <MenuItem value="month">Месяц</MenuItem>
-                <MenuItem value="year">Год</MenuItem>
-              </Select>
-            </FormControl>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              <Button variant="outlined" onClick={handlePrevPeriod}>
-                <ArrowBackIosIcon style={{ height: 24, width: 24 }} />
+                Массовое измение
               </Button>
-              <Typography variant="subtitle1" sx={{ px: 1, fontWeight: 'medium' }}>
-                {formatPeriodLabel()}
-              </Typography>
-              <Button variant="outlined" onClick={handleNextPeriod}>
-                <ArrowForwardIosIcon style={{ height: 24, width: 24 }} />
-              </Button>
+              {bulkMode && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Button variant="outlined" onClick={handleBulkEdit} startIcon={<EditIcon />} />
+                  <Button variant="outlined" onClick={handleBulkDelete} startIcon={<DeleteIcon />} />
+                </Box>
+              )}
+            </Box>
+            {/* END BULK MODE */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <FormControl size="small" sx={{ minWidth: 180 }}>
+                <InputLabel id="view-period-label">Период</InputLabel>
+                <Select
+                  labelId="view-period-label"
+                  value={viewPeriod}
+                  label="Период"
+                  onChange={(e) => setViewPeriod(e.target.value as ViewPeriod)}
+                >
+                  <MenuItem value="week">Неделя</MenuItem>
+                  <MenuItem value="month">Месяц</MenuItem>
+                  <MenuItem value="year">Год</MenuItem>
+                </Select>
+              </FormControl>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <Button variant="outlined" onClick={handlePrevPeriod}>
+                  <ArrowBackIosIcon style={{ height: 24, width: 24 }} />
+                </Button>
+                <Typography variant="subtitle1" sx={{ px: 1, fontWeight: 'medium' }}>
+                  {formatPeriodLabel()}
+                </Typography>
+                <Button variant="outlined" onClick={handleNextPeriod}>
+                  <ArrowForwardIosIcon style={{ height: 24, width: 24 }} />
+                </Button>
+              </Box>
             </Box>
           </Box>
-        </Box>
         }
       />
-            {/* menu: Боковое меню (Drawer) для управления чередованием */}
-            <Drawer anchor="left" open={sideMenuOpen} onClose={() => setSideMenuOpen(false)}>
-  <Box sx={{ 
-    width: 250, 
-    p: 2,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 1 // Добавляет равные промежутки между всеми детьми
-  }}>
-    <Button
-      fullWidth
-      variant="outlined"
-      startIcon={<AddIcon style={{ height: 16, width: 16 }} />}
-      onClick={() => { 
-        setIsCreatePatternDialogOpen(true); 
-        setSideMenuOpen(false); 
-      }}
-    >
-      Создать чередование
-    </Button>
+      {/* menu: Боковое меню (Drawer) для управления чередованием */}
+      <Drawer anchor="left" open={sideMenuOpen} onClose={() => setSideMenuOpen(false)}>
+        <Box sx={{
+          width: 250,
+          p: 2,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1 // Добавляет равные промежутки между всеми детьми
+        }}>
+          <Button
+            fullWidth
+            variant="outlined"
+            startIcon={<AddIcon style={{ height: 16, width: 16 }} />}
+            onClick={() => {
+              setIsCreatePatternDialogOpen(true);
+              setSideMenuOpen(false);
+            }}
+          >
+            Создать чередование
+          </Button>
 
-    <Button
-      fullWidth
-      variant="outlined"
+          <Button
+            fullWidth
+            variant="outlined"
 
-      startIcon={<EventAvailableIcon style={{ height: 16, width: 16 }} />}
-      onClick={() => { 
-        setIsAssignDialogOpen(true); 
-        setSideMenuOpen(false); 
-      }}
-    >
-      Применить чередование
-    </Button>
-    
-    <ShiftTypeDialog
-      shiftTypes={shiftTypes}
-      onSave={handleAddShiftType}
-      onUpdate={handleUpdateShiftType}
-      onDelete={handleDeleteShiftType}
-      trigger={
-        <Button 
-          fullWidth 
-          variant="outlined"
-          startIcon={<SettingsIcon style={{ height: 16, width: 16 }} />}
-          sx={{ mt: 0 }} // Выравниваем с остальными кнопками
-        >
-          Управление типами смен
-        </Button>
-      }
-    />
-  </Box>
-</Drawer>
+            startIcon={<EventAvailableIcon style={{ height: 16, width: 16 }} />}
+            onClick={() => {
+              setIsAssignDialogOpen(true);
+              setSideMenuOpen(false);
+            }}
+          >
+            Применить чередование
+          </Button>
+
+          <ShiftTypeDialog
+            shiftTypes={shiftTypes}
+            onSave={handleAddShiftType}
+            onUpdate={handleUpdateShiftType}
+            onDelete={handleDeleteShiftType}
+            trigger={
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<SettingsIcon style={{ height: 16, width: 16 }} />}
+                sx={{ mt: 0 }} // Выравниваем с остальными кнопками
+              >
+                Управление типами смен
+              </Button>
+            }
+          />
+        </Box>
+      </Drawer>
       <CardContent>
         <Box sx={{ width: '100%', height: '85vh', overflow: 'auto' }}>
           <AgGridReact
@@ -1425,8 +1442,8 @@ const handleBulkEdit = () => {
           <Button onClick={() => setIsAssignDialogOpen(false)}>Закрыть</Button>
         </DialogActions>
       </Dialog>
-       {/* Bulk Edit Dialog для массового редактирования смен */}
-       <ShiftDialog
+      {/* Bulk Edit Dialog для массового редактирования смен */}
+      <ShiftDialog
         shift={null} // Можно передать значения из первой выбранной смены, если требуется
         employeeId={bulkSelectedShifts.length > 0 ? bulkSelectedShifts[0].employeeId.toString() : ""}
         date={bulkSelectedShifts.length > 0 ? bulkSelectedShifts[0].date : ""}
