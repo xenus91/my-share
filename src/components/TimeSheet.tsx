@@ -113,7 +113,7 @@ export default function TimeSheet() {
   // Регистрируем необходимые модули
 
   // Добавляем состояние для фильтра сотрудников
-  const [employeeFilter, setEmployeeFilter] = useState<{ field: string; value: string } | null>(null);
+  const [employeeFilter, setEmployeeFilter] = useState<{ field: string; value: string[] } | null>(null);
    // Состояние для фильтрации по дате/типу смены
   const [activeFilter, setActiveFilter] = useState<FilterState | null>(null);
   const gridRef = useRef<AgGridReact>(null);
@@ -626,12 +626,16 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
   const rows = useMemo(() => {
     return timeData
     .filter((employee) => {
-      if (!employeeFilter || !employeeFilter.value.trim()) return true;
+      if (!employeeFilter || !employeeFilter.value || employeeFilter.value.length === 0) {
+        return true;
+      }
       const field = employeeFilter.field;
-      // Приводим employee к any, чтобы использовать динамический ключ
       const fieldValue = (employee as any)[field];
       if (typeof fieldValue !== 'string') return false;
-      return fieldValue.toLowerCase().includes(employeeFilter.value.toLowerCase());
+      // Фильтруем, если значение поля совпадает (без учета регистра) с хотя бы одним выбранным значением
+      return employeeFilter.value.some(
+        (option: string) => fieldValue.toLowerCase() === option.toLowerCase()
+      );
     })
       // Фильтруем сотрудников, если activeFilter установлен
       .filter((employee) => {
@@ -782,8 +786,12 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
   const fixedColumns: ColDef[] = useMemo(() => [
     {
       headerComponent: (params: any) => (
-        // Передаем onFilterChange для обновления employeeFilterText
-        <EmployeeHeaderWithFilter {...params} onFilterChange={setEmployeeFilter} />
+        // Передаём onFilterChange для обновления фильтра и список сотрудников (timeData)
+        <EmployeeHeaderWithFilter
+          {...params}
+          onFilterChange={setEmployeeFilter}
+          employees={timeData} // Здесь передаём данные сотрудников для вычисления уникальных значений
+        />
       ),
       field: 'Title',
       filterValueGetter: (params) => params.data.Title,
@@ -928,7 +936,7 @@ const handleBulkEditSave = (data: Omit<Shift, "ID" | "EmployeeId" | "Date">) => 
         return `${params.value}ч`;
       },
     },
-  ], []);
+  ], [timeData]);
 
   const dynamicColumns: ColDef[] = useMemo(
     () =>
