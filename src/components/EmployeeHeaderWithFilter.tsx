@@ -122,7 +122,7 @@ const EmployeeHeaderWithFilter: React.FC<EmployeeHeaderWithFilterProps> = (props
           }}
         >
           {filterableFields.map((field) => (
-            <MenuItem key={field.value} value={field.value}>
+            <MenuItem key={field.value} value={field.value} sx={{ fontSize: '0.8rem', height: '30px',}}>
               {field.label}
             </MenuItem>
           ))}

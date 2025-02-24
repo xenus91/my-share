@@ -40,9 +40,9 @@ const CustomColumnsPanel: React.FC<CustomColumnsPanelProps> = ({ options, select
   };
 
   return (
-    <Box sx={{ width: 250, p: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-        <SearchIcon sx={{ fontSize: '0.75rem' }} />
+    <Box sx={{ width: 250, p: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 0 }}>
+        <SearchIcon sx={{ fontSize: '1rem' }} />
         <TextField
           variant="outlined"
           size="small"
@@ -52,7 +52,7 @@ const CustomColumnsPanel: React.FC<CustomColumnsPanelProps> = ({ options, select
           sx={{
             ml: 1,
             flex: 1,
-            '& .MuiInputBase-input': { fontSize: '0.6rem' }
+            '& .MuiInputBase-input': { fontSize: '0.8rem' }
           }}
         />
         {search && (
@@ -68,7 +68,7 @@ const CustomColumnsPanel: React.FC<CustomColumnsPanelProps> = ({ options, select
               <ListItemButton 
                 key={option} 
                 onClick={() => handleToggle(option)}
-                sx={{ py: 0.25 }}
+                sx={{ py: 0.1 }}
               >
                 <ListItemIcon sx={{ minWidth: 24 }}>
                   <Checkbox
@@ -83,7 +83,7 @@ const CustomColumnsPanel: React.FC<CustomColumnsPanelProps> = ({ options, select
                 </ListItemIcon>
                 <ListItemText
                   primary={option}
-                  primaryTypographyProps={{ variant: 'caption', fontSize: '0.6rem' }}
+                  primaryTypographyProps={{ variant: 'caption', fontSize: '0.8rem' }}
                 />
               </ListItemButton>
             ))
@@ -91,14 +91,14 @@ const CustomColumnsPanel: React.FC<CustomColumnsPanelProps> = ({ options, select
             <ListItem>
               <ListItemText
                 primary="Нет значений"
-                primaryTypographyProps={{ variant: 'caption', fontSize: '0.6rem' }}
+                primaryTypographyProps={{ variant: 'caption', fontSize: '0.8rem' }}
               />
             </ListItem>
           )}
         </List>
       </Box>
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-        <Button variant="outlined" size="small" onClick={onReset} sx={{ fontSize: '0.6rem', minWidth: 60 }}>
+        <Button variant="outlined" size="small" onClick={onReset} sx={{ fontSize: '0.8rem', minWidth: 60 }}>
           Сбросить
         </Button>
       </Box>
