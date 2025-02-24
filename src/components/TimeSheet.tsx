@@ -1165,6 +1165,9 @@ export default function TimeSheet() {
               <Typography variant="body2" color="text.secondary">
                 {employee.JobTitle}
               </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Смена: {employee.ShiftNumber} {employee.ShiftTimeType}
+              </Typography>
             </Box>
 
             <Menu anchorEl={menuAnchorEl} open={Boolean(menuAnchorEl)} onClose={handleMenuClose}>
