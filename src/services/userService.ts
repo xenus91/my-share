@@ -96,28 +96,28 @@ export async function getEmployee(): Promise<Employee[]> {
 // Создание сотрудника в списке "Employees"
 export async function createEmployee(payload: {
     preferredName: string;
-    EmployeeID: string;
+    employeeID: string;
     employeeId: number;
     jobTitle: string;
     department: string;
     office: string;
         //newColumn: добавляем новые поля
-        ShiftNumber: number | null;
-        ShiftTimeType: string; // или тип ShiftTimeType | ""
+    shiftNumber: number | null;
+    shiftTimeType: string; // или тип ShiftTimeType | ""
 }): Promise<Employee> {
     try {
         const digest = await getRequestDigest();
         const postPayload = {
             __metadata: { type: "SP.Data.EmployeesListItem" },
             Title: payload.preferredName,
-            EmployeeID: payload.EmployeeID,
+            EmployeeID: payload.employeeID,
             EmployeeId: payload.employeeId,
             JobTitle: payload.jobTitle,
             Department: payload.department,
             Office: payload.office,
              //newColumn: новые поля
-             ShiftNumber: payload.ShiftNumber,
-             ShiftTimeType: payload.ShiftTimeType,
+             ShiftNumber: payload.shiftNumber,
+             ShiftTimeType: payload.shiftTimeType,
         };
 
         const response = await apiClient.post(
@@ -150,8 +150,8 @@ export async function updateEmployee(
       department: string;
       office: string;
       //newColumn: новые поля
-      ShiftNumber: number | null;
-      ShiftTimeType: string;
+      shiftNumber: number | null;
+      shiftTimeType: string;
     }
   ): Promise<void> {
     try {
@@ -169,8 +169,8 @@ export async function updateEmployee(
         Office: payload.office,
         Modified: new Date().toISOString(), 
          //newColumn: новые поля
-         ShiftNumber: payload.ShiftNumber,
-         ShiftTimeType: payload.ShiftTimeType,
+         ShiftNumber: payload.shiftNumber,
+         ShiftTimeType: payload.shiftTimeType,
       };
   
       // 4. Отправляем запрос с необходимыми заголовками

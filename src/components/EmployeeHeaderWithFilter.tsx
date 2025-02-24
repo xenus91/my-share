@@ -7,16 +7,14 @@ import {
   MenuItem,
   IconButton,
   Badge,
-  Popover,
-  Checkbox,
-  ListItemText,
-  OutlinedInput
+  Popover
 } from '@mui/material';
 import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import { EmployeeDialog } from './EmployeeDialog';
+import CustomColumnsPanel from './CustomColumnsPanel';
 
 const filterableFields = [
   { value: 'Title', label: 'Имя' },
@@ -32,7 +30,6 @@ interface EmployeeHeaderWithFilterProps {
   onFilterChange: (filter: { field: string; value: string[] }) => void;
   onSortChange: (sort: { field: string; order: 'asc' | 'desc' | null }) => void;
   employees: any[]; // массив сотрудников
-  // остальные props от ag‑grid
   [key: string]: any;
 }
 
@@ -67,7 +64,7 @@ const EmployeeHeaderWithFilter: React.FC<EmployeeHeaderWithFilterProps> = (props
     }
   }, [uniqueOptions, selectedField]);
 
-  const handleFilterChange = (field: string, values: string[]) => {
+  const handleFilterChangeInternal = (field: string, values: string[]) => {
     console.log(`Filter changed: field "${field}", selected options =`, values);
     onFilterChange({ field, value: values });
   };
@@ -77,21 +74,13 @@ const EmployeeHeaderWithFilter: React.FC<EmployeeHeaderWithFilterProps> = (props
     console.log('Selected new field:', newField);
     setSelectedField(newField);
     setSelectedOptions([]);
-    handleFilterChange(newField, []);
-  };
-
-  const handleOptionsChange = (event: any) => {
-    const { target: { value } } = event;
-    const newOptions = typeof value === 'string' ? value.split(',') : value;
-    console.log('New selected options:', newOptions);
-    setSelectedOptions(newOptions);
-    handleFilterChange(selectedField, newOptions);
+    handleFilterChangeInternal(newField, []);
   };
 
   const handleResetFilter = () => {
     console.log('Reset filter for field:', selectedField);
     setSelectedOptions([]);
-    handleFilterChange(selectedField, []);
+    handleFilterChangeInternal(selectedField, []);
   };
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -107,13 +96,12 @@ const EmployeeHeaderWithFilter: React.FC<EmployeeHeaderWithFilterProps> = (props
   const isFilterActive = selectedOptions.length > 0;
 
   // Обработка клика по заголовку для сортировки
-  const handleSortChange = () => {
+  const handleSortClick = () => {
     let newSort: 'asc' | 'desc' | null;
     if (!sortOrder) newSort = 'asc';
     else if (sortOrder === 'asc') newSort = 'desc';
     else newSort = null;
     setSortOrder(newSort);
-    // Передаём выбранное поле (из селекта) и новый порядок сортировки
     onSortChange({ field: selectedField, order: newSort });
   };
 
@@ -124,7 +112,7 @@ const EmployeeHeaderWithFilter: React.FC<EmployeeHeaderWithFilterProps> = (props
         <Select
           value={selectedField}
           onChange={handleSelectChange}
-          variant="outlined"
+          variant="standard"
           size="small"
           sx={{
             fontSize: '0.8rem',
@@ -142,7 +130,7 @@ const EmployeeHeaderWithFilter: React.FC<EmployeeHeaderWithFilterProps> = (props
       </Box>
       {/* Заголовок с сортировкой по выбранному полю */}
       <Box display="flex" alignItems="center" justifyContent="space-between">
-        <Box display="flex" alignItems="center" sx={{ cursor: 'pointer' }} onClick={handleSortChange}>
+        <Box display="flex" alignItems="center" sx={{ cursor: 'pointer' }} onClick={handleSortClick}>
           <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
             Сотрудник
           </Typography>
@@ -178,40 +166,22 @@ const EmployeeHeaderWithFilter: React.FC<EmployeeHeaderWithFilterProps> = (props
           </Button>
         </Box>
       </Box>
-      {/* Popover для выбора значений фильтра */}
+      {/* Popover для выбора значений фильтра с использованием CustomColumnsPanel */}
       <Popover
         open={Boolean(anchorEl)}
         anchorEl={anchorEl}
         onClose={handleCloseFilterPopover}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
       >
-        <Box sx={{ p: 2, width: 250 }}>
-          <Select
-            multiple
-            value={selectedOptions}
-            onChange={handleOptionsChange}
-            input={<OutlinedInput label="Выберите" />}
-            renderValue={(selected) => (selected as string[]).join(', ')}
-            fullWidth
-            sx={{ fontSize: '0.8rem', '& .MuiSelect-select': { padding: '4px 8px' }, borderRadius: '16px' }}
-          >
-            {uniqueOptions.length > 0 ? (
-              uniqueOptions.map((option: string) => (
-                <MenuItem key={option} value={option}>
-                  <Checkbox checked={selectedOptions.indexOf(option) > -1} />
-                  <ListItemText primary={option} />
-                </MenuItem>
-              ))
-            ) : (
-              <MenuItem disabled>Нет значений</MenuItem>
-            )}
-          </Select>
-          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-            <Button variant="outlined" size="small" onClick={handleResetFilter} sx={{ fontSize: '0.8rem' }}>
-              Сбросить
-            </Button>
-          </Box>
-        </Box>
+        <CustomColumnsPanel
+          options={uniqueOptions}
+          selected={selectedOptions}
+          onChange={(newSelected) => {
+            setSelectedOptions(newSelected);
+            handleFilterChangeInternal(selectedField, newSelected);
+          }}
+          onReset={handleResetFilter}
+        />
       </Popover>
 
       <EmployeeDialog

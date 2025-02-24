@@ -116,6 +116,10 @@ export default function TimeSheet() {
     order: null,
   });
 
+  const [timeData, setTimeData] = useState<TimeSheetEntry[]>([
+
+  ]);
+
   // Добавляем состояние для фильтра сотрудников
   const [employeeFilter, setEmployeeFilter] = useState<{ field: string; value: string[] } | null>(null);
   // Состояние для фильтрации по дате/типу смены
@@ -207,9 +211,7 @@ export default function TimeSheet() {
   }, []);
 
   // Список сотрудников. ID — число
-  const [timeData, setTimeData] = useState<TimeSheetEntry[]>([
 
-  ]);
 
   useEffect(() => {
     // Если сотрудников ещё нет, ничего не делаем.
@@ -753,6 +755,7 @@ export default function TimeSheet() {
         const row: any = {
           ID: employee.ID,
           employeeId: employee.ID,
+          EmployeeID: employee.EmployeeID,
           Title: employee.Title,
           JobTitle: employee.JobTitle,
           Department: employee.Department,
@@ -765,6 +768,9 @@ export default function TimeSheet() {
           totalHoursCLWToDelete, // Добавляем
           holidayHoursToDelete, // Добавляем
           normHours,
+                  // Добавляем новые поля:
+          ShiftNumber: employee.ShiftNumber,
+          ShiftTimeType: employee.ShiftTimeType,
         };
 
         days.forEach((day) => {

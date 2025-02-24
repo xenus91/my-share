@@ -72,6 +72,7 @@ export function EmployeeDialog({
   // При редактировании заполняем форму данными сотрудника;
   // теперь используем всегда employee.ID в качестве lookup‑ID
   useEffect(() => {
+    console.log("Employee prop:", employee);
     if (employee) {
       setLookupEmployeeId(employee.ID);
       setFormData({
@@ -240,8 +241,8 @@ export function EmployeeDialog({
           department: formData.Department,
           office: formData.Office,
            //newColumn: передаем новые поля
-           ShiftNumber: formData.ShiftNumber,
-           ShiftTimeType: formData.ShiftTimeType,
+           shiftNumber: formData.ShiftNumber,
+           shiftTimeType: formData.ShiftTimeType,
         });
   
         //console.log(`✅ Сотрудник (ID: ${employee.ID}) обновлён`);
@@ -263,14 +264,14 @@ export function EmployeeDialog({
         const effectiveUserId = userId ? Number(userId) : 0;
         const payload = {
           preferredName: formData.Title,
-          EmployeeID: formData.EmployeeID,
+          employeeID: formData.EmployeeID,
           employeeId: effectiveUserId,
           jobTitle: formData.JobTitle,
           department: formData.Department,
           office: formData.Office,
            //newColumn: передаем новые поля
-           ShiftNumber: formData.ShiftNumber,
-           ShiftTimeType: formData.ShiftTimeType,
+           shiftNumber: formData.ShiftNumber,
+           shiftTimeType: formData.ShiftTimeType,
         };
   
   
