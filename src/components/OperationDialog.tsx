@@ -26,6 +26,7 @@ import {
 } from 'ag-grid-community';
 import { format } from 'date-fns';
 import { Operation, AggregatedMetrics } from '../types';
+import { createOperation } from '../services/operationService';
 //import { createOperation } from '../services/operationService';
 
 // Регистрируем модули AgGrid

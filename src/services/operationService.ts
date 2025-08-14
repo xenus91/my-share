@@ -1,6 +1,7 @@
 // src/services/operationService.ts
 import apiClient from '../api';
 import { Operation } from '../types';
+import { getRequestDigest } from './contextService';
 
 // Получение операций по фильтрам (сотрудники и даты)
 export async function getOperations(
@@ -94,4 +95,47 @@ export async function getOperations(
   }
 }
 
+
+// Создание новой операции
+export async function createOperation(operation: Partial<Operation>): Promise<number> {
+  try {
+    const digest = await getRequestDigest();
+    const payload = {
+      __metadata: { type: 'SP.Data.shipmentgroup_productivity_v4ListItem' },
+      Title: operation.Title || `Операция LPR для ${operation.UserName?.Id}`,
+      UserNameId: operation.UserName?.Id,
+      MetricName: 'LPR', // Ограничиваем только LPR
+      MetricValue: operation.MetricValue || 0,
+      OperationDate: operation.OperationDate,
+      MetricTime: operation.MetricTime || new Date().toISOString().substring(11, 16),
+      ShipmentGID: operation.ShipmentGID || '',
+      Tonnage: operation.Tonnage || 0,
+      TonnageCategory: operation.TonnageCategory || '',
+      NumRefUnits: operation.NumRefUnits || 0,
+      TtlPM: operation.TtlPM || 0,
+      Exception: operation.Exception || false,
+      ShiftType: operation.ShiftType || '',
+      LocationGID: operation.LocationGID || '',
+    };
+
+    const response = await apiClient.post(
+      "/web/lists/GetByTitle('shipmentgroup_productivity_v4')/items",
+      payload,
+      {
+        headers: {
+          Accept: 'application/json;odata=verbose',
+          'Content-Type': 'application/json;odata=verbose',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-RequestDigest': digest,
+        },
+      }
+    );
+
+    console.log('✅ Операция создана:', response.data);
+    return response.data.d.Id;
+  } catch (error) {
+    console.error('❌ Ошибка создания операции:', error);
+    throw error;
+  }
+}
 
