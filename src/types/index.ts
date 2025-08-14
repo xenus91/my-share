@@ -9,6 +9,44 @@ export interface WorkloadPeriod {
   EmployeeId: number;  // ✅ Добавляем это поле!
 }
 
+// Интерфейс Operation (без изменений)
+export interface Operation {
+  Id: number;
+  Title: string;
+  LocationGID: string;
+  ShiftType: string;
+  UserName: {
+    Id: number;
+    Title: string;
+    Email: string;
+  };
+  TonnageCategory: string;
+  Tonnage: number;
+  ShipmentGID: string;
+  MetricName: string;
+  MetricValue: number;
+  MetricTime: string;
+  NumRefUnits: number;
+  TtlPM: number;
+  OperationDate: string;
+  Exception: boolean;
+  Created: string;
+  Modified: string;
+  Author: { Id: number; Title: string };
+  Editor: { Id: number; Title: string };
+}
+
+// Интерфейс для агрегированных метрик по дню
+export interface AggregatedMetrics {
+  shipped_pallets_lt20: number;
+  shipped_pallets_gt20: number;
+  unloading: number;
+  moving_pallets: number;
+  transfer_thu: number;
+  LPR: number;
+  operationCount: number;
+}
+
 // Или используя enum:
 export enum ShiftTimeType {
   Morning = 'утро',
@@ -20,7 +58,7 @@ export enum ShiftTimeType {
 // Элемент списка "Employees"
 export interface Employee {
   ID: number;           // уникальный числовой идентификатор из SharePoint
-  EmployeeID: string;
+  EmployeeId: number;
   Title: string;        // имя сотрудника (используем стандартное поле Title)
   JobTitle: string;     // должность сотрудника
   Department: string;
@@ -80,6 +118,15 @@ export interface TimeEntry {
   TotalHours: number;
   Status: 'pending' | 'approved' | 'rejected';
   Notes?: string;
+}
+
+// Обновленный интерфейс для дня в TimeSheetEntry
+export interface DayEntry {
+  employeeId: number;
+  date: string;
+  shifts: Shift[];
+  operations?: Operation[]; // Операции за день
+  aggregatedMetrics?: AggregatedMetrics; // Агрегированные метрики за день
 }
 
 // Интерфейс для календарного дня (например, для производственного календаря)

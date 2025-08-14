@@ -2,10 +2,43 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { format, getDay, parse, addDays, startOfDay, max, min, differenceInMinutes } from 'date-fns';
-import { productionCalendar2025, Shift } from '../types';
+import { productionCalendar2025, Shift, Operation, AggregatedMetrics } from '../types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+export function aggregateOperations(operations: Operation[]): AggregatedMetrics {
+  console.log('📊 aggregateOperations: Входные операции=', operations);
+  const metrics: AggregatedMetrics = {
+    shipped_pallets_lt20: 0,
+    shipped_pallets_gt20: 0,
+    unloading: 0,
+    moving_pallets: 0,
+    transfer_thu: 0,
+    LPR: 0,
+    operationCount: operations.length,
+  };
+
+  operations.forEach((op) => {
+    console.log('📈 Обработка операции:', op);
+    if (op.MetricName === 'shipped_pallets' && op.TonnageCategory === '<20') {
+      metrics.shipped_pallets_lt20 += op.MetricValue || 0;
+    } else if (op.MetricName === 'shipped_pallets' && op.TonnageCategory === '>20') {
+      metrics.shipped_pallets_gt20 += op.MetricValue || 0;
+    } else if (op.MetricName === 'unload' || op.MetricName === 'transit_pallets') {
+      metrics.unloading += op.MetricValue || 0;
+    } else if (op.MetricName === 'transit_pallets') {
+      metrics.moving_pallets += op.MetricValue || 0;
+    } else if (op.MetricName === 'transfer_thu') {
+      metrics.transfer_thu += op.MetricValue || 0;
+    } else if (op.MetricName === 'LPR') {
+      metrics.LPR += op.MetricValue || 0;
+    }
+  });
+
+  console.log('📊 Результат агрегации:', metrics);
+  return metrics;
 }
 
 export function getDayNorm(date: Date): number {
