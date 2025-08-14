@@ -17,8 +17,6 @@ export interface Operation {
   ShiftType: string;
   UserName: {
     Id: number;
-    Title: string;
-    Email: string;
   };
   TonnageCategory: string;
   Tonnage: number;

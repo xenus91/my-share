@@ -107,8 +107,7 @@ export function ShiftCellRenderer(
           aggregatedMetrics={aggregatedMetrics}
           operations={operations}
           date={date}
-          employeeName={employeeName}
-        />
+          employeeName={employeeName} employeeId={0}        />
       </Box>
       {/* Правая часть: список смен */}
       <Scrollbars
