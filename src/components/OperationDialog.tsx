@@ -1,4 +1,14 @@
-import React, { useState, useRef, useCallback } from 'react';
+// OperationDialog.tsx
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  forwardRef,
+  useImperativeHandle,
+  ForwardedRef,
+  MutableRefObject,
+  useMemo,
+} from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -6,48 +16,54 @@ import {
   DialogActions,
   Button,
   ButtonGroup,
-  TextField,
-  MenuItem,
-  FormControl,
-  Select,
   Box,
   Typography,
+  IconButton,
+  CircularProgress,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
+import DeleteIcon from '@mui/icons-material/Delete';
+
 import { AgGridReact } from 'ag-grid-react';
-import { ColDef, GridOptions, ICellEditorParams, ICellRendererParams } from 'ag-grid-community';
+import type {
+  ColDef,
+  GridOptions,
+  ICellEditorParams,
+  ICellRendererParams,
+  GetRowIdFunc,
+} from 'ag-grid-community';
+
+// обязательные стили AG Grid
+//import 'ag-grid-community/styles/ag-grid.css';
+//import 'ag-grid-community/styles/ag-theme-alpine.css';
+
+// регистрация модулей (исправляет ошибку #200)
 import { ModuleRegistry } from 'ag-grid-community';
 import {
   ClientSideRowModelModule,
+  ClientSideRowModelApiModule,
   TextFilterModule,
   NumberFilterModule,
   DateFilterModule,
+  CustomEditorModule 
 } from 'ag-grid-community';
-import { format } from 'date-fns';
-import { Operation, AggregatedMetrics } from '../types';
-import { createOperation } from '../services/operationService';
-//import { createOperation } from '../services/operationService';
 
-// Регистрируем модули AgGrid
+// зарегистрировать ОДИН РАЗ в приложении
 ModuleRegistry.registerModules([
   ClientSideRowModelModule,
+  ClientSideRowModelApiModule,
   TextFilterModule,
   NumberFilterModule,
   DateFilterModule,
+  CustomEditorModule 
 ]);
 
-interface OperationDialogProps {
-  open: boolean;
-  onClose: () => void;
-  aggregatedMetrics: AggregatedMetrics;
-  operations: Operation[];
-  date: string;
-  employeeName: string;
-  employeeId: number;
-}
+// ваши сервисы
+import { createOperation, updateOperation, deleteOperation } from '../services/operationService';
 
-interface NewOperation {
+// типы домена (упростил до необходимых полей)
+export interface Operation {
   Id?: number;
   MetricName: string;
   MetricValue: number;
@@ -55,133 +71,264 @@ interface NewOperation {
   Tonnage: number;
   NumRefUnits: number;
   TtlPM: number;
-  MetricTime: string;
-  OperationDate: string;
-  isNew?: boolean;
+  MetricTime: string;    // HH:mm
+  OperationDate: string; // YYYY-MM-DD
+  Exception: boolean;
 }
 
-// Кастомный редактор для Select
-const SelectCellEditor = React.forwardRef((props: ICellEditorParams, ref) => {
-  const [value, setValue] = useState(props.value || '');
+export interface AggregatedMetrics {
+  shipped_pallets_lt20: number;
+  shipped_pallets_gt20: number;
+  unloading: number;
+  moving_pallets: number;
+  transfer_thu: number;
+  LPR: number;
+  operationCount: number;
+}
 
-  React.useImperativeHandle(ref, () => ({
+interface OperationDialogProps {
+  open: boolean;
+  onClose: () => void;
+  aggregatedMetrics: AggregatedMetrics;
+  operations: Operation[];
+  date: string; // YYYY-MM-DD
+  employeeName: string;
+  employeeId: number;
+}
+
+// внутренняя строка грида с временным ключом
+type OperationRow = Operation & {
+  __rowId: string;  // стабильный ключ строки до появления реального Id
+  isNew: boolean;
+};
+
+// ======================= кастомные редакторы =======================
+
+// Select-редактор для MetricName (только для новых строк)
+const SelectMetricEditor = forwardRef(function SelectMetricEditor(
+  props: ICellEditorParams,
+  ref: ForwardedRef<any>
+) {
+  const [value, setValue] = useState<string>(props.value ?? 'LPR');
+
+  useEffect(() => {
+    // автофокус на элемент <select/>
+    const el = document.getElementById('metric-select-editor') as HTMLSelectElement | null;
+    el?.focus();
+  }, []);
+
+  useImperativeHandle(ref, () => ({
     getValue: () => value,
   }));
 
   return (
-    <FormControl fullWidth>
-      <Select
-        value={value}
-        onChange={(e) => {
-          setValue(e.target.value);
-          props.stopEditing();
-        }}
-        autoFocus
-        size="small"
-      >
-        <MenuItem value="shipped_pallets_lt20">Отгруженные паллеты (до 20 т)</MenuItem>
-        <MenuItem value="shipped_pallets_gt20">Отгруженные паллеты (20 т)</MenuItem>
-        <MenuItem value="unloading">Разгрузка</MenuItem>
-        <MenuItem value="moving_pallets">Перемещение паллет</MenuItem>
-        <MenuItem value="transfer_thu">Перевод ЕО в ОТМ</MenuItem>
-        <MenuItem value="LPR">КТУ</MenuItem>
-      </Select>
-    </FormControl>
-  );
-});
-
-// Кастомный редактор для TextField
-const TextFieldCellEditor = React.forwardRef((props: ICellEditorParams, ref) => {
-  const [value, setValue] = useState(props.value || '');
-
-  React.useImperativeHandle(ref, () => ({
-    getValue: () => value,
-  }));
-
-  return (
-    <TextField
+    <select
+      id="metric-select-editor"
       value={value}
       onChange={(e) => setValue(e.target.value)}
-      autoFocus
-      fullWidth
-      variant="outlined"
-      size="small"
-    />
+      style={{ width: '100%', height: 32 }}
+    >
+      <option value="LPR">КТУ</option>
+      <option value="transfer_thu">Перевод ЕО в ОТМ</option>
+    </select>
   );
 });
 
-// Кастомный редактор для числовых полей
-const NumberCellEditor = React.forwardRef((props: ICellEditorParams, ref) => {
-  const [value, setValue] = useState(props.value || '');
+// числовой редактор
+const NumberCellEditor = forwardRef(function NumberCellEditor(
+  props: ICellEditorParams,
+  ref: ForwardedRef<any>
+) {
+  const [value, setValue] = useState<string>(props.value != null ? String(props.value) : '');
 
-  React.useImperativeHandle(ref, () => ({
-    getValue: () => parseFloat(value) || 0,
+  useEffect(() => {
+    const el = document.getElementById('number-editor') as HTMLInputElement | null;
+    el?.focus();
+    el?.select();
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    getValue: () => (value === '' ? 0 : Number(value)),
   }));
 
   return (
-    <TextField
+    <input
+      id="number-editor"
       type="number"
       value={value}
       onChange={(e) => setValue(e.target.value)}
-      autoFocus
-      fullWidth
-      variant="outlined"
-      size="small"
+      style={{ width: '100%', height: 32, boxSizing: 'border-box' }}
     />
   );
 });
 
-// Рендерер для кнопки "Сохранить"
-const SaveButtonRenderer = (props: ICellRendererParams) => {
-  const { data, api } = props;
-  if (!data.isNew) return null;
+// текстовый редактор
+const TextCellEditor = forwardRef(function TextCellEditor(
+  props: ICellEditorParams,
+  ref: ForwardedRef<any>
+) {
+  const [value, setValue] = useState<string>(props.value ?? '');
 
-  const handleSave = async () => {
-    // Проверяем обязательные поля
-    if (!data.MetricName || data.MetricValue <= 0) {
-      alert('Пожалуйста, заполните обязательные поля: Название метрики и Значение');
+  useEffect(() => {
+    const el = document.getElementById('text-editor') as HTMLInputElement | null;
+    el?.focus();
+    el?.select();
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    getValue: () => value,
+  }));
+
+  return (
+    <input
+      id="text-editor"
+      type="text"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      style={{ width: '100%', height: 32, boxSizing: 'border-box' }}
+    />
+  );
+});
+
+// редактор времени HH:mm
+const TimeCellEditor = forwardRef(function TimeCellEditor(
+  props: ICellEditorParams,
+  ref: ForwardedRef<any>
+) {
+  const initial = (props.value as string) || new Date().toISOString().slice(11, 16);
+  const [value, setValue] = useState<string>(initial);
+
+  useEffect(() => {
+    const el = document.getElementById('time-editor') as HTMLInputElement | null;
+    el?.focus();
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    getValue: () => value,
+  }));
+
+  return (
+    <input
+      id="time-editor"
+      type="time"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      style={{ width: '100%', height: 32, boxSizing: 'border-box' }}
+    />
+  );
+});
+
+// ======================= ячейка действий =======================
+
+function ActionsRenderer(props: ICellRendererParams<OperationRow>) {
+  const { data, api, context } = props;
+  const savingRef = context?.savingRef as MutableRefObject<boolean>;
+  const employeeName: string = context.employeeName;
+  const date: string = context.date;
+  const employeeId: number = context.employeeId;
+
+  const disabled = !!savingRef?.current;
+
+  const onSave = async () => {
+    if (!data) return;
+
+    if (!data.MetricName) {
+      alert('Не выбрана метрика');
+      return;
+    }
+    if (data.MetricValue == null || Number(data.MetricValue) <= 0) {
+      alert('Заполните корректное значение (больше 0)');
       return;
     }
 
-    // Завершаем редактирование
-    api.stopEditing();
+    try {
+      if (savingRef) savingRef.current = true;
+
+      if (data.isNew) {
+        // создание
+        const newId = await createOperation({
+          Title: `Операция ${data.MetricName} для ${employeeName} на ${date}`,
+          UserName: { Id: employeeId },
+          MetricName: data.MetricName,
+          MetricValue: data.MetricValue,
+          OperationDate: data.OperationDate,
+          MetricTime: data.MetricTime,
+          ShipmentGID: data.ShipmentGID,
+          Tonnage: data.Tonnage,
+          NumRefUnits: data.NumRefUnits,
+          TtlPM: data.TtlPM,
+          Exception: data.Exception,
+        });
+
+        // обновляем ТУ ЖЕ ссылкой (важно для избежания #5)
+        data.Id = newId;
+        data.isNew = false;
+        data.__rowId = `op-${newId}`;
+
+        api.applyTransaction({ update: [data] });
+      } else {
+        // обновление
+        await updateOperation(data.Id!, {
+          MetricName: data.MetricName,
+          MetricValue: data.MetricValue,
+          MetricTime: data.MetricTime,
+          ShipmentGID: data.ShipmentGID,
+          Tonnage: data.Tonnage,
+          NumRefUnits: data.NumRefUnits,
+          TtlPM: data.TtlPM,
+          Exception: data.Exception,
+          OperationDate: data.OperationDate,
+        });
+
+        api.applyTransaction({ update: [data] });
+      }
+    } catch (e) {
+      console.error('Ошибка при сохранении операции', e);
+      alert('Ошибка при сохранении операции');
+    } finally {
+      if (savingRef) savingRef.current = false;
+    }
+  };
+
+  const onDelete = async () => {
+    if (!data) return;
+
+    if (!data.isNew && !confirm('Удалить операцию?')) return;
 
     try {
-      const newId = await createOperation({
-        Title: `Операция для ${props.context.employeeName} на ${props.context.date}`,
-        MetricName: data.MetricName,
-        MetricValue: data.MetricValue,
-        OperationDate: data.OperationDate,
-        MetricTime: data.MetricTime,
-        ShipmentGID: data.ShipmentGID,
-        Tonnage: data.Tonnage,
-        NumRefUnits: data.NumRefUnits,
-        TtlPM: data.TtlPM,
-        UserName: { Id: props.context.employeeId },
-      });
-      // Обновляем строку с новым ID и убираем флаг isNew
-      api.applyTransaction({
-        update: [{ ...data, Id: newId, isNew: false }],
-      });
-      console.log('✅ Новая операция добавлена:', newId);
-    } catch (error) {
-      console.error('❌ Ошибка при добавлении операции:', error);
-      alert('Ошибка при сохранении операции');
+      if (savingRef) savingRef.current = true;
+
+      if (!data.isNew && data.Id) {
+        await deleteOperation(data.Id);
+      }
+      api.applyTransaction({ remove: [data] });
+    } catch (e) {
+      console.error('Ошибка при удалении операции', e);
+      alert('Ошибка при удалении операции');
+    } finally {
+      if (savingRef) savingRef.current = false;
     }
   };
 
   return (
-    <Button
-      variant="contained"
-      size="small"
-      startIcon={<SaveIcon />}
-      onClick={handleSave}
-      sx={{ m: 1 }}
-    >
-      Сохранить
-    </Button>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center' }}>
+      <Button
+        size="small"
+        variant="contained"
+        startIcon={<SaveIcon />}
+        onClick={onSave}
+        disabled={disabled}
+      >
+        Сохранить
+      </Button>
+      <IconButton size="small" onClick={onDelete} disabled={disabled}>
+        <DeleteIcon />
+      </IconButton>
+    </Box>
   );
-};
+}
+
+// ======================= основной компонент =======================
 
 export default function OperationDialog({
   open,
@@ -192,177 +339,143 @@ export default function OperationDialog({
   employeeName,
   employeeId,
 }: OperationDialogProps) {
+  const gridRef = useRef<AgGridReact<OperationRow>>(null);
+  const savingRef = useRef<boolean>(false);
+  const tmpIdRef = useRef<number>(1);
+
   const [tab, setTab] = useState<'metrics' | 'operations'>('metrics');
-  const [rowData, setRowData] = useState<NewOperation[]>(operations);
-  const gridRef = useRef<AgGridReact>(null);
+  const [initialRows, setInitialRows] = useState<OperationRow[]>([]);
 
-  const handleTabChange = (newTab: 'metrics' | 'operations') => {
-    setTab(newTab);
-  };
+  // преобразуем входной массив операций в строки грида с постоянными ключами
+  useEffect(() => {
+    const rows: OperationRow[] = (operations || []).map((op) => ({
+      ...op,
+      __rowId: op.Id ? `op-${op.Id}` : `tmp-${tmpIdRef.current++}`,
+      isNew: !op.Id,
+    }));
+    setInitialRows(rows);
+  }, [operations]);
 
-  const handleAddOperation = useCallback(() => {
-    const newRow: NewOperation = {
-      MetricName: '',
-      MetricValue: 0,
-      ShipmentGID: '',
-      Tonnage: 0,
-      NumRefUnits: 0,
-      TtlPM: 0,
-      MetricTime: '',
-      OperationDate: date,
-      isNew: true,
-    };
-    setRowData([newRow, ...rowData]);
-    gridRef.current?.api?.applyTransaction({ add: [newRow], addIndex: 0 });
-    // Запускаем редактирование первой колонки
+  // генератор новой строки
+  const makeNewRow = (): OperationRow => ({
+    __rowId: `tmp-${tmpIdRef.current++}`,
+    Id: undefined,
+    MetricName: 'LPR',
+    MetricValue: 0,
+    ShipmentGID: '',
+    Tonnage: 0,
+    NumRefUnits: 0,
+    TtlPM: 0,
+    MetricTime: new Date().toISOString().slice(11, 16),
+    OperationDate: date,
+    Exception: false,
+    isNew: true,
+  });
+
+  // Добавить новую строку
+  const handleAddOperation = () => {
+    const newRow = makeNewRow();
+    gridRef.current?.api.applyTransaction({ add: [newRow], addIndex: 0 });
+    // авто-редактирование первой ячейки
     setTimeout(() => {
-      gridRef.current?.api?.startEditingCell({
+      gridRef.current?.api.startEditingCell({
         rowIndex: 0,
         colKey: 'MetricName',
       });
     }, 0);
-  }, [rowData, date]);
+  };
 
-  // Колонки для таблицы агрегированных метрик
-  const metricsColumns: ColDef[] = [
-    {
-      headerName: 'Метрика',
-      field: 'name',
-      filter: 'agTextColumnFilter',
-      sortable: true,
-      width: 250,
-    },
-    {
-      headerName: 'Значение',
-      field: 'value',
-      filter: 'agNumberColumnFilter',
-      sortable: true,
-      width: 150,
-      cellStyle: { textAlign: 'right' },
-    },
-  ];
+  // ===== столбцы агрегированных метрик (левая вкладка) =====
+  const metricsColumns: ColDef[] = useMemo(
+    () => [
+      { headerName: 'Метрика', field: 'name', sortable: true, filter: 'agTextColumnFilter' },
+      {
+        headerName: 'Значение',
+        field: 'value',
+        sortable: true,
+        filter: 'agNumberColumnFilter',
+        cellStyle: { textAlign: 'right' },
+      },
+    ],
+    []
+  );
 
-  // Данные для таблицы агрегированных метрик
-  const metricsRows = [
-    { name: 'Отгруженные паллеты (до 20 т)', value: aggregatedMetrics.shipped_pallets_lt20 },
-    { name: 'Отгруженные паллеты (20 т)', value: aggregatedMetrics.shipped_pallets_gt20 },
-    { name: 'Разгрузка', value: aggregatedMetrics.unloading },
-    { name: 'Перемещение паллет', value: aggregatedMetrics.moving_pallets },
-    { name: 'Перевод ЕО в ОТМ', value: aggregatedMetrics.transfer_thu },
-    { name: 'КТУ', value: aggregatedMetrics.LPR },
-    { name: 'Количество операций', value: aggregatedMetrics.operationCount },
-  ];
+  const metricsRows = useMemo(
+    () => [
+      { name: 'Отгруженные паллеты (до 20 т)', value: aggregatedMetrics.shipped_pallets_lt20 },
+      { name: 'Отгруженные паллеты (20 т)', value: aggregatedMetrics.shipped_pallets_gt20 },
+      { name: 'Разгрузка', value: aggregatedMetrics.unloading },
+      { name: 'Перемещение паллет', value: aggregatedMetrics.moving_pallets },
+      { name: 'Перевод ЕО в ОТМ', value: aggregatedMetrics.transfer_thu },
+      { name: 'КТУ', value: aggregatedMetrics.LPR },
+      { name: 'Количество операций', value: aggregatedMetrics.operationCount },
+    ],
+    [aggregatedMetrics]
+  );
 
-  // Колонки для таблицы операций
-  const operationsColumns: ColDef[] = [
+  // ===== столбцы операций (правая вкладка) =====
+  const operationColumns: ColDef<OperationRow>[] = useMemo(
+  () => [
+    { headerName: 'ID', field: 'Id', width: 100, editable: false, filter: 'agNumberColumnFilter', sortable: true },
+    { headerName: 'Метрика', field: 'MetricName', editable: (p) => p.data?.isNew === true, filter: 'agTextColumnFilter', sortable: true, width: 160, cellEditor: 'selectMetricEditor' },
+    { headerName: 'Значение', field: 'MetricValue', filter: 'agNumberColumnFilter', sortable: true, width: 130, editable: (p) => p.data?.MetricName === 'LPR' || p.data?.MetricName === 'transfer_thu', cellEditor: 'numberCellEditor' },
+    { headerName: 'Shipment GID', field: 'ShipmentGID', filter: 'agTextColumnFilter', sortable: true, width: 160, editable: true, cellEditor: 'textCellEditor' },
+    { headerName: 'Тоннаж', field: 'Tonnage', filter: 'agNumberColumnFilter', sortable: true, width: 120, editable: true, cellEditor: 'numberCellEditor' },
+    { headerName: 'Паллетоместа', field: 'NumRefUnits', filter: 'agNumberColumnFilter', sortable: true, width: 140, editable: true, cellEditor: 'numberCellEditor' },
+    { headerName: 'Утилизация', field: 'TtlPM', filter: 'agNumberColumnFilter', sortable: true, width: 120, editable: true, cellEditor: 'numberCellEditor' },
+    { headerName: 'Дата операции', field: 'OperationDate', filter: 'agDateColumnFilter', sortable: true, width: 150, editable: false },
+    { headerName: 'Время метрики', field: 'MetricTime', filter: 'agTextColumnFilter', sortable: true, width: 140, editable: true, cellEditor: 'timeCellEditor' },
     {
-      headerName: 'ID',
-      field: 'Id',
-      filter: 'agNumberColumnFilter',
-      sortable: true,
-      width: 100,
-      editable: false,
-    },
-    {
-      headerName: 'Метрика',
-      field: 'MetricName',
-      filter: 'agTextColumnFilter',
-      sortable: true,
-      width: 150,
-      editable: (params) => params.data.isNew,
-      cellEditor: SelectCellEditor,
-      cellEditorPopup: false,
-    },
-    {
-      headerName: 'Значение',
-      field: 'MetricValue',
-      filter: 'agNumberColumnFilter',
-      sortable: true,
-      width: 120,
-      editable: (params) => params.data.isNew,
-      cellEditor: NumberCellEditor,
-    },
-    {
-      headerName: 'Транспортировка',
-      field: 'ShipmentGID',
-      filter: 'agTextColumnFilter',
-      sortable: true,
-      width: 150,
-      editable: (params) => params.data.isNew,
-      cellEditor: TextFieldCellEditor,
-    },
-    {
-      headerName: 'Тоннаж',
-      field: 'Tonnage',
-      filter: 'agNumberColumnFilter',
-      sortable: true,
-      width: 120,
-      editable: (params) => params.data.isNew,
-      cellEditor: NumberCellEditor,
-    },
-    {
-      headerName: 'Паллетоместа',
-      field: 'NumRefUnits',
-      filter: 'agNumberColumnFilter',
-      sortable: true,
-      width: 120,
-      editable: (params) => params.data.isNew,
-      cellEditor: NumberCellEditor,
-    },
-    {
-      headerName: 'Утилизация',
-      field: 'TtlPM',
-      filter: 'agNumberColumnFilter',
-      sortable: true,
-      width: 120,
-      editable: (params) => params.data.isNew,
-      cellEditor: NumberCellEditor,
-    },
-    {
-      headerName: 'Дата операции',
-      field: 'OperationDate',
-      filter: 'agDateColumnFilter',
-      sortable: true,
-      width: 150,
-      valueFormatter: (params) => format(new Date(params.value), 'dd.MM.yyyy'),
-      editable: false,
-    },
-    {
-      headerName: 'Время метрики',
-      field: 'MetricTime',
+      headerName: 'Исключение',
+      field: 'Exception',
       filter: 'agTextColumnFilter',
       sortable: true,
       width: 120,
-      editable: (params) => params.data.isNew,
-      cellEditor: TextFieldCellEditor,
+      editable: true,
+      cellEditor: 'textCellEditor',
+      valueFormatter: (p) => (p.value ? 'Да' : 'Нет'),
+      valueParser: (p) => {
+        const val = String(p.newValue).trim().toLowerCase();
+        return val === 'true' || val === 'да' || val === '1';
+      },
     },
     {
       headerName: 'Действия',
-      field: 'actions',
-      width: 150,
-      cellRenderer: SaveButtonRenderer,
+      field: undefined,
+      width: 220,
       editable: false,
-      cellStyle: { display: 'flex', alignItems: 'center' },
+      cellRenderer: ActionsRenderer,
     },
-  ];
+  ],
+  []
+);
 
-  const gridOptions: GridOptions = {
-    defaultColDef: {
-      resizable: true,
-      sortable: true,
-      filter: true,
-      floatingFilter: true,
-    },
-    rowHeight: 40,
-    suppressDragLeaveHidesColumns: true,
-    context: { employeeName, date, employeeId },
-    getRowStyle: (params) => {
-      if (params.data.isNew) {
-        return { background: '#e6f7fa' }; // Выделяем новую строку светло-голубым цветом
-      }
-      return undefined;
-    },
-  };
+
+  // grid options: НЕТ applyTransaction в onCellEditingStopped => нет #5
+  const gridOptions: GridOptions<OperationRow> = useMemo(
+    () => ({
+      defaultColDef: {
+        resizable: true,
+        sortable: true,
+        filter: true,
+        floatingFilter: true,
+        editable: true,
+      },
+      rowHeight: 40,
+      suppressDragLeaveHidesColumns: true,
+      // важный ключ: используем реальный Id, если он есть; иначе временный __rowId
+      getRowId: ((p) => (p.data.Id ? `op-${p.data.Id}` : p.data.__rowId)) as GetRowIdFunc<OperationRow>,
+      // НЕ обновляем через update на стопе, просто пусть грид держит изменения в data
+      stopEditingWhenCellsLoseFocus: true,
+      context: {
+        employeeName,
+        date,
+        employeeId,
+        savingRef,
+      },
+    }),
+    [employeeName, date, employeeId]
+  );
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
@@ -371,15 +484,15 @@ export default function OperationDialog({
           <Typography variant="h6">
             Данные по операциям для {employeeName} ({date})
           </Typography>
-          <ButtonGroup variant="contained" aria-label="outlined primary button group">
+          <ButtonGroup variant="contained">
             <Button
-              onClick={() => handleTabChange('metrics')}
+              onClick={() => setTab('metrics')}
               color={tab === 'metrics' ? 'primary' : 'inherit'}
             >
               Агрегированные метрики
             </Button>
             <Button
-              onClick={() => handleTabChange('operations')}
+              onClick={() => setTab('operations')}
               color={tab === 'operations' ? 'primary' : 'inherit'}
             >
               Полные операции
@@ -387,45 +500,66 @@ export default function OperationDialog({
           </ButtonGroup>
         </Box>
       </DialogTitle>
+
       <DialogContent sx={{ overflow: 'hidden' }}>
         {tab === 'metrics' && (
-          <Box sx={{ height: '400px', width: '100%' }}>
-            <AgGridReact
-              ref={gridRef}
-              rowData={metricsRows}
-              columnDefs={metricsColumns}
-              gridOptions={gridOptions}
-              modules={[ClientSideRowModelModule, TextFilterModule, NumberFilterModule]}
-            />
+          <Box sx={{ height: 400, width: '100%' }}>
+            <div className="ag-theme-alpine" style={{ height: '100%', width: '100%' }}>
+              <AgGridReact
+                rowData={metricsRows}
+                columnDefs={metricsColumns}
+                modules={[
+                  ClientSideRowModelModule,
+                  ClientSideRowModelApiModule,
+                  TextFilterModule,
+                  NumberFilterModule,
+                ]}
+              />
+            </div>
           </Box>
         )}
+
         {tab === 'operations' && (
-          <Box sx={{ height: '400px', width: '100%' }}>
+          <Box sx={{ height: 460, width: '100%' }}>
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={handleAddOperation}
+                disabled={savingRef.current}
               >
-                Добавить операцию
+                Добавить операцию (LPR/Перевод ЕО в ОТМ)
               </Button>
             </Box>
-            <AgGridReact
-              ref={gridRef}
-              rowData={rowData}
-              columnDefs={operationsColumns}
-              gridOptions={gridOptions}
-              modules={[ClientSideRowModelModule, TextFilterModule, NumberFilterModule, DateFilterModule]}
-              noRowsOverlayComponent={() => (
-                <Typography align="center" sx={{ p: 2 }}>
-                  Нет операций
-                </Typography>
-              )}
-            />
+
+            <div className="ag-theme-alpine" style={{ height: 420, width: '100%' }}>
+              <AgGridReact<OperationRow>
+                ref={gridRef}
+                rowData={initialRows}
+                columnDefs={operationColumns as ColDef[]}
+                gridOptions={gridOptions}
+                modules={[
+                  ClientSideRowModelModule,
+                  ClientSideRowModelApiModule,
+                  TextFilterModule,
+                  NumberFilterModule,
+                  DateFilterModule,
+                ]}
+                components={{
+                  selectMetricEditor: SelectMetricEditor,
+                  numberCellEditor: NumberCellEditor,
+                  textCellEditor: TextCellEditor,
+                  timeCellEditor: TimeCellEditor,
+                }}
+                overlayNoRowsTemplate={'<span style="padding:8px;display:block;text-align:center">Нет операций</span>'}
+              />
+            </div>
           </Box>
         )}
       </DialogContent>
+
       <DialogActions>
+        {savingRef.current && <CircularProgress size={20} sx={{ mr: 2 }} />}
         <Button onClick={onClose}>Закрыть</Button>
       </DialogActions>
     </Dialog>

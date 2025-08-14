@@ -139,3 +139,61 @@ export async function createOperation(operation: Partial<Operation>): Promise<nu
   }
 }
 
+// Обновление существующей операции
+export async function updateOperation(operationId: number, operation: Partial<Operation>): Promise<void> {
+  try {
+    const digest = await getRequestDigest();
+    const payload = {
+      __metadata: { type: 'SP.Data.shipmentgroup_productivity_v4ListItem' },
+      MetricValue: operation.MetricValue,
+      MetricTime: operation.MetricTime,
+      ShipmentGID: operation.ShipmentGID,
+      Tonnage: operation.Tonnage,
+      NumRefUnits: operation.NumRefUnits,
+      TtlPM: operation.TtlPM,
+      Exception: operation.Exception,
+    };
+
+    await apiClient.post(
+      `/web/lists/GetByTitle('shipmentgroup_productivity_v4')/items(${operationId})`,
+      payload,
+      {
+        headers: {
+          Accept: 'application/json;odata=verbose',
+          'Content-Type': 'application/json;odata=verbose',
+          'X-RequestDigest': digest,
+          'IF-MATCH': '*',
+          'X-HTTP-Method': 'MERGE',
+        },
+      }
+    );
+
+    console.log('✅ Операция обновлена:', operationId);
+  } catch (error) {
+    console.error('❌ Ошибка обновления операции:', error);
+    throw error;
+  }
+}
+
+// Удаление операции
+export async function deleteOperation(operationId: number): Promise<void> {
+  try {
+    const digest = await getRequestDigest();
+    await apiClient.post(
+      `/web/lists/GetByTitle('shipmentgroup_productivity_v4')/items(${operationId})/recycle`,
+      {},
+      {
+        headers: {
+          Accept: 'application/json;odata=verbose',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-RequestDigest': digest,
+        },
+      }
+    );
+
+    console.log('✅ Операция отправлена в корзину:', operationId);
+  } catch (error) {
+    console.error('❌ Ошибка удаления операции:', error);
+    throw error;
+  }
+}
