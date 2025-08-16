@@ -22,18 +22,26 @@ export function aggregateOperations(operations: Operation[]): AggregatedMetrics 
 
   operations.forEach((op) => {
     console.log('📈 Обработка операции:', op);
-    if (op.MetricName === 'shipped_pallets' && op.TonnageCategory === '<20') {
-      metrics.shipped_pallets_lt20 += op.MetricValue || 0;
-    } else if (op.MetricName === 'shipped_pallets' && op.TonnageCategory === '>20') {
-      metrics.shipped_pallets_gt20 += op.MetricValue || 0;
-    } else if (op.MetricName === 'unload' || op.MetricName === 'transit_pallets') {
-      metrics.unloading += op.MetricValue || 0;
-    } else if (op.MetricName === 'transit_pallets') {
-      metrics.moving_pallets += op.MetricValue || 0;
-    } else if (op.MetricName === 'transfer_thu') {
-      metrics.transfer_thu += op.MetricValue || 0;
-    } else if (op.MetricName === 'LPR') {
-      metrics.LPR += op.MetricValue || 0;
+    switch (op.MetricName) {
+      case 'shipped_pallets':
+        if (op.TonnageCategory === '<20') {
+          metrics.shipped_pallets_lt20 += op.MetricValue || 0;
+        } else if (op.TonnageCategory === '>20') {
+          metrics.shipped_pallets_gt20 += op.MetricValue || 0;
+        }
+        break;
+      case 'transit_pallets':
+        metrics.moving_pallets += op.MetricValue || 0;
+        /* falls through */
+      case 'unload':
+        metrics.unloading += op.MetricValue || 0;
+        break;
+      case 'transfer_thu':
+        metrics.transfer_thu += op.MetricValue || 0;
+        break;
+      case 'LPR':
+        metrics.LPR += op.MetricValue || 0;
+        break;
     }
   });
 
