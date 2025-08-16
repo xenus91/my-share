@@ -382,6 +382,7 @@ export default function OperationDialog({
   }, [open, employeeId, date, initUserIdOnOpen, fetchAndSeed]);
 
   /* ===== Пересчёт агрегатов из rows ===== */
+   /* ===== Пересчёт агрегатов из rows ===== */
   const aggregates = useMemo<AggregatedMetrics>(() => {
     const acc: AggregatedMetrics = {
       shipped_pallets_lt20: 0,
@@ -392,11 +393,14 @@ export default function OperationDialog({
       LPR: 0,
       operationCount: 0,
     };
-    for (const r of rows) {
-      if (!r || r.Exception) continue; // исключённые не считаем
-      const val = Number(r.MetricValue) || 0;
 
-      switch (r.MetricName) {
+    for (const r of rows) {
+      if (!r || r.Exception) continue;
+
+      const val = Number(r.MetricValue) || 0;
+      const metric = (r.MetricName || '').trim();
+
+      switch (metric) {
         case 'shipped_pallets': {
           const cat = (r.TonnageCategory || '').trim();
           if (cat === '<20' || cat === 'lt20' || cat === '< 20') {
@@ -406,23 +410,32 @@ export default function OperationDialog({
           }
           break;
         }
+
+        case 'transit_pallets':
+          // как в ShiftCellRenderer: считаем и как перемещение, и как разгрузку
+          acc.moving_pallets += val;
+          acc.unloading += val;
+          break;
+
         case 'unload':
           acc.unloading += val;
           break;
-        case 'transit_pallets':
-          acc.moving_pallets += val;
-          break;
+
         case 'transfer_thu':
           acc.transfer_thu += val;
           break;
+
         case 'LPR':
           acc.LPR += val;
           break;
+
         default:
           break;
       }
+
       acc.operationCount += 1;
     }
+
     return acc;
   }, [rows]);
 
